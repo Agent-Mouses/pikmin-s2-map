@@ -1,40 +1,56 @@
-# Pikmin Bloom S2 Cell Map Tool
+# 🌱 Pikmin Bloom S2 Cell Map Tool
 
-🌱 S2 Cell 地圖視覺化工具，用於皮克敏 Bloom 刷盆策略規劃。
+All-in-one mobile web tool for Pikmin Bloom farming strategy — S2 Cell grid, decor catalog, collection tracker, POI map.
 
-## 功能
+**🌐 Live:** https://agent-mouses.github.io/pikmin-s2-map/
 
-- **S2 Cell 網格覆蓋** — 在地圖上顯示 S2 Cell 格線
-- **Level 12-20 切換** — 滑桿 + 快捷按鈕切換 Cell Level
-- **GPS 定位** — 顯示目前位置及所在格子
-- **格子點擊資訊** — 點擊格子顯示 Cell ID、座標
-- **行動裝置友善** — 觸控操作、響應式設計
+## Features
 
-## 使用方式
+### 🗺️ Map Tab
+- **S2 Cell grid overlay** — Level 12-20, viewport-based rendering
+- **GPS positioning** — Real-time location + current cell highlight
+- **Cell click info** — Cell ID, level, center coordinates
+- **Cell marking** — Mark cells as ✅ Farmed / ⏳ Cooldown / ⭐ Bookmarked (persisted in localStorage)
+- **POI layer** — Toggle Overpass API to show nearby decor-type locations (restaurants, parks, stations, etc.)
 
-直接開啟 `index.html` 或部署到 GitHub Pages。
+### 📖 Decor Tab
+- **Full decor catalog** — 96 categories with all variants and Pikmin types
+- **Collection tracking** — Tap to mark collected, persisted in localStorage
+- **Filter & search** — By category type (Location/Event/Roadside/Weather/Regional)
+- **Progress tracking** — Per-category completion percentage
 
-### 本地測試
+### 📊 Stats Tab
+- **Overall progress** — Total collection percentage
+- **By-category breakdown** — Completion stats per decor category
+- **Cell mark summary** — Count of farmed/cooldown/bookmarked cells
+- **Export/Import** — Backup and restore your data as JSON
+
+## Tech Stack
+
+- **Leaflet.js** — Map rendering (CDN, Canvas renderer)
+- **S2 Geometry** — Ported from jonatkins/s2-geometry-javascript
+- **Overpass API** — OSM POI querying with multi-server failover
+- **localStorage** — Zero-account persistence
+- **Vanilla JS** — No build tools, no framework, no backend
+- **GitHub Pages** — Free static hosting
+
+## Local Development
 
 ```bash
-# 任何靜態伺服器皆可
+# Any static server works
 python3 -m http.server 8080
-# 然後開啟 http://localhost:8080
+# Open http://localhost:8080
 ```
 
-## 技術
+## Credits
 
-- Leaflet.js — 地圖底圖 (OpenStreetMap)
-- 自寫 S2 Cell 幾何計算 — 基於 jonatkins/s2-geometry-javascript
-- 純前端靜態網站，無需後端
+Decor data and OSM mapping rules from [scott0127/pik_tool](https://github.com/scott0127/pik_tool) (MIT).
+S2 geometry from [jonatkins/s2-geometry-javascript](https://github.com/jonatkins/s2-geometry-javascript).
+Decor images from [Pikipedia](https://www.pikminwiki.com/) (CC BY-SA 4.0).
+Map data from [OpenStreetMap](https://www.openstreetmap.org/) (ODbL).
 
-## S2 Cell 刷盆小知識
-
-- 皮克敏 Bloom 使用 **Level 17** 的 S2 Cell（約 150m × 150m）
-- 每格有固定掉落物，有 CD 冷卻時間
-- 約 1,000～3,000 步觸發一盆掉落
-- 每日自然生成上限 25 盆
+See [CREDITS.md](CREDITS.md) for full attribution.
 
 ## License
 
-MIT
+Original code: MIT. Game assets © Nintendo. See [CREDITS.md](CREDITS.md).
