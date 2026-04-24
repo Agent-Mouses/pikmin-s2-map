@@ -179,6 +179,41 @@
   };
 
   // --- 飾品圖鑑 ---
+  // Map noto: icon names to emoji (Iconify noto set → Unicode emoji)
+  const ICON_MAP = {
+    'noto:man-cook':'🍽️','noto:hot-beverage':'☕','noto:doughnut':'🍩','noto:baguette-bread':'🥐',
+    'noto:hamburger':'🍔','noto:pizza':'🍕','noto:steaming-bowl':'🍜','noto:sushi':'🍣',
+    'noto:curry-rice':'🍛','noto:taco':'🌮','noto:bento-box':'🍱','noto:pot-of-food':'🍲',
+    'noto:four-leaf-clover':'🍀','noto:deciduous-tree':'🌲','noto:cherry-blossom':'🌸',
+    'noto:blossom':'🌼','noto:fallen-leaf':'🍂','noto:mushroom':'🍄','noto:bouquet':'💐',
+    'noto:spiral-shell':'🐚','noto:tropical-fish':'🐠','noto:snow-capped-mountain':'🏔️',
+    'noto:locomotive':'🚂','noto:bus':'🚌','noto:airplane':'✈️','noto:bridge-at-night':'🌉',
+    'noto:running-shoe':'👟','noto:skateboard':'🛹','noto:person-surfing':'🏄',
+    'noto:postbox':'✉️','noto:scissors':'✂️','noto:toothbrush':'🪥','noto:ribbon':'🎀',
+    'noto:framed-picture':'🖼️','noto:artist-palette':'🎨','noto:popcorn':'🍿','noto:musical-note':'🎵',
+    'noto:fishing-pole':'🎣','noto:ferris-wheel':'🎡','noto:soccer-ball':'⚽',
+    'noto:video-game':'🎮','noto:chess-pawn':'♟️','noto:mahjong-red-dragon':'🀄',
+    'noto:books':'📚','noto:graduation-cap':'🎓','noto:camera-with-flash':'📸',
+    'noto:glasses':'👓','noto:lipstick':'💄','noto:t-shirt':'👕','noto:gloves':'🧤',
+    'noto:hammer':'🔨','noto:key':'🔑','noto:battery':'🔋',
+    'noto:banana':'🍌','noto:tangerine':'🍊','noto:egg':'🥚','noto:cheese-wedge':'🧀',
+    'noto:chocolate-bar':'🍫','noto:ice-cream':'🍦','noto:shaved-ice':'🍧',
+    'noto:cupcake':'🧁','noto:birthday-cake':'🎂','noto:moon-cake':'🥮',
+    'noto:beverage-box':'🧃','noto:teapot':'🫖','noto:baby-bottle':'🍼',
+    'noto:coin':'🪙','noto:wrapped-gift':'🎁','noto:confetti-ball':'🎊',
+    'noto:party-popper':'🎉','noto:jack-o-lantern':'🎃','noto:christmas-tree':'🎄',
+    'noto:snowflake':'❄️','noto:sun':'☀️','noto:umbrella':'☂️',
+    'noto:heart-with-arrow':'💘','noto:revolving-hearts':'💞','noto:rosette':'🏵️',
+    'noto:flower-playing-cards':'🎴','noto:red-paper-lantern':'🏮',
+    'noto:shinto-shrine':'⛩️','noto:rabbit-face':'🐰',
+    'noto:rocket':'🚀','noto:skull':'💀','noto:spade-suit':'♠️',
+  };
+  const toEmoji = (icon) => {
+    if (!icon) return '📦';
+    if (icon.startsWith('noto:')) return ICON_MAP[icon] || '📦';
+    return icon;
+  };
+
   const renderDecorCatalog = () => {
     if (!decorData) { $('decor-list').innerHTML = '<p style="padding:16px;color:#aaa">載入飾品資料中...</p>'; return; }
     const coll = Collection.loadCollection();
@@ -209,7 +244,7 @@
       }).join('');
       const pct = catTotal ? Math.round(catCollected / catTotal * 100) : 0;
       return `<details class="decor-card"><summary>
-        <span class="cat-icon">${cat.icon || '📦'}</span>
+        <span class="cat-icon">${toEmoji(cat.icon)}</span>
         <span class="cat-name">${cat.name || cat.nameEn}</span>
         <span class="cat-progress">${catCollected}/${catTotal} (${pct}%)</span>
       </summary><div class="card-body">${variantHtml}</div></details>`;
@@ -246,7 +281,7 @@
         ${Object.entries(stats.byCat).map(([catId, s]) => {
           const def = decorData.definitions.find(d => d.category.id === catId);
           const name = def ? (def.category.name || def.category.nameEn) : catId;
-          const icon = def?.category.icon || '📦';
+          const icon = toEmoji(def?.category.icon);
           const p = s.total ? Math.round(s.collected / s.total * 100) : 0;
           return `<div class="stat-row"><span>${icon} ${name}</span><span>${s.collected}/${s.total} (${p}%)</span></div>`;
         }).join('')}
