@@ -1,8 +1,7 @@
-// Pikmin Bloom S2 Cell Map Tool — Full App
+// Pikmin Bloom S2 Cell 地圖工具
 (() => {
   'use strict';
 
-  // --- State ---
   let currentLevel = 17, currentTab = 'map';
   let cellLayer = null, userMarker = null, userCellHL = null, selCellHL = null;
   let poiLayer = null, poiEnabled = false, decorData = null;
@@ -11,21 +10,21 @@
     17:'#3498db',18:'#9b59b6',19:'#e91e63',20:'#795548'
   };
   const LEVEL_DESC = {
-    12:'Regional',13:'City',14:'District',15:'Neighborhood',16:'Block (~300m)',
-    17:'Pikmin (~150m)',18:'Fine (~75m)',19:'Very Fine (~38m)',20:'Ultra Fine (~19m)'
+    12:'區域級',13:'城市級',14:'行政區',15:'社區級',16:'街區 (~300m)',
+    17:'皮克敏 (~150m)',18:'精細 (~75m)',19:'極細 (~38m)',20:'超細 (~19m)'
   };
   const MARK_COLORS = { farmed: '#4ade80', cooldown: '#fbbf24', bookmark: '#f472b6' };
+  const MARK_LABELS = { farmed: '✅ 已刷', cooldown: '⏳ 冷卻中', bookmark: '⭐ 收藏' };
 
   const $ = (id) => document.getElementById(id);
 
-  // --- Map init ---
   const map = L.map('map', { center: [25.033, 121.565], zoom: 16, zoomControl: false, renderer: L.canvas() });
   L.control.zoom({ position: 'bottomright' }).addTo(map);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>', maxZoom: 21
   }).addTo(map);
 
-  // --- Tab switching ---
+  // --- 分頁切換 ---
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       currentTab = btn.dataset.tab;
@@ -37,7 +36,7 @@
     });
   });
 
-  // --- Level control ---
+  // --- Level 控制 ---
   const slider = $('level-slider');
   const updateLevel = () => {
     $('level-display').textContent = `L${currentLevel}`;
@@ -49,14 +48,14 @@
     b.addEventListener('click', () => { currentLevel = +b.dataset.level; updateLevel(); renderCells(); })
   );
 
-  // --- Cell rendering ---
+  // --- 格子渲染 ---
   const renderCells = () => {
     if (cellLayer) map.removeLayer(cellLayer);
     if (selCellHL) { map.removeLayer(selCellHL); selCellHL = null; }
     const b = map.getBounds();
     const bounds = { sw: { lat: b.getSouth(), lng: b.getWest() }, ne: { lat: b.getNorth(), lng: b.getEast() } };
     const cells = S2.getCellsInBounds(bounds, currentLevel);
-    if (cells.size > 3000) { $('cell-count').textContent = `Too many cells. Zoom in.`; return; }
+    if (cells.size > 3000) { $('cell-count').textContent = `格子太多，請放大地圖`; return; }
 
     const marks = Collection.getAllMarks();
     const color = LEVEL_COLORS[currentLevel] || '#3498db';
@@ -80,7 +79,7 @@
     });
 
     cellLayer = group.addTo(map);
-    $('cell-count').textContent = `${cells.size} cells`;
+    $('cell-count').textContent = `${cells.size} 格`;
     if (userMarker) { const ll = userMarker.getLatLng(); highlightUserCell(ll.lat, ll.lng); }
   };
 
@@ -93,14 +92,14 @@
     const center = S2.cellCenter(cell);
     const id = S2.cellId(cell);
     const mark = Collection.getCellMark(key);
-    const markBtns = Object.entries(Collection.MARK_TYPES).map(([type, emoji]) =>
-      `<button class="mark-btn ${mark === type ? 'active' : ''}" data-mark="${type}" data-key="${key}">${emoji} ${type}</button>`
+    const markBtns = Object.entries(MARK_LABELS).map(([type, label]) =>
+      `<button class="mark-btn ${mark === type ? 'active' : ''}" data-mark="${type}" data-key="${key}">${label}</button>`
     ).join('');
 
     $('info-content').innerHTML = `
-      <div class="info-row"><span class="info-label">Cell ID</span><span class="info-value clickable" title="Copy">${id}</span></div>
-      <div class="info-row"><span class="info-label">Level</span><span class="info-value">${currentLevel}</span></div>
-      <div class="info-row"><span class="info-label">Center</span><span class="info-value">${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}</span></div>
+      <div class="info-row"><span class="info-label">格子 ID</span><span class="info-value clickable" title="點擊複製">${id}</span></div>
+      <div class="info-row"><span class="info-label">等級</span><span class="info-value">${currentLevel}</span></div>
+      <div class="info-row"><span class="info-label">中心座標</span><span class="info-value">${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}</span></div>
       <div class="mark-row">${markBtns}</div>
     `;
     $('info-content').querySelector('.clickable').onclick = () => navigator.clipboard.writeText(id);
@@ -137,7 +136,7 @@
       if (userCellHL) { map.removeLayer(userCellHL); userCellHL = null; }
       return;
     }
-    if (!navigator.geolocation) return alert('Geolocation not supported');
+    if (!navigator.geolocation) return alert('此裝置不支援定位功能');
     $('gps-btn').classList.add('active');
     watchId = navigator.geolocation.watchPosition(
       pos => {
@@ -148,12 +147,12 @@
         } else userMarker.setLatLng([lat, lng]);
         highlightUserCell(lat, lng);
       },
-      err => { alert('GPS: ' + err.message); $('gps-btn').classList.remove('active'); watchId = null; },
+      err => { alert('定位失敗：' + err.message); $('gps-btn').classList.remove('active'); watchId = null; },
       { enableHighAccuracy: true, maximumAge: 5000 }
     );
   });
 
-  // --- POI layer ---
+  // --- POI 圖層 ---
   $('poi-toggle').addEventListener('click', () => {
     poiEnabled = !poiEnabled;
     $('poi-toggle').classList.toggle('active', poiEnabled);
@@ -179,9 +178,9 @@
     poiLayer.addTo(map);
   };
 
-  // --- Decor Catalog ---
+  // --- 飾品圖鑑 ---
   const renderDecorCatalog = () => {
-    if (!decorData) { $('decor-list').innerHTML = '<p style="padding:16px;color:#aaa">Loading decor data...</p>'; return; }
+    if (!decorData) { $('decor-list').innerHTML = '<p style="padding:16px;color:#aaa">載入飾品資料中...</p>'; return; }
     const coll = Collection.loadCollection();
     const filterType = $('decor-filter')?.value || 'all';
     const searchTerm = ($('decor-search')?.value || '').toLowerCase();
@@ -206,22 +205,21 @@
             ${imgUrl ? `<img src="${imgUrl}" alt="${pt}" loading="lazy">` : `<span class="pt-label">${pt[0].toUpperCase()}</span>`}
           </button>`;
         }).join('');
-        return `<div class="variant-row"><span class="variant-name">${v.nameEn || v.name}</span><div class="pikmin-grid">${pikminHtml}</div></div>`;
+        return `<div class="variant-row"><span class="variant-name">${v.name || v.nameEn}</span><div class="pikmin-grid">${pikminHtml}</div></div>`;
       }).join('');
       const pct = catTotal ? Math.round(catCollected / catTotal * 100) : 0;
       return `<details class="decor-card"><summary>
         <span class="cat-icon">${cat.icon || '📦'}</span>
-        <span class="cat-name">${cat.nameEn || cat.name}</span>
+        <span class="cat-name">${cat.name || cat.nameEn}</span>
         <span class="cat-progress">${catCollected}/${catTotal} (${pct}%)</span>
       </summary><div class="card-body">${variantHtml}</div></details>`;
     }).join('');
 
-    // Bind toggle events
     $('decor-list').querySelectorAll('.pikmin-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const now = Collection.toggle(btn.dataset.item);
         btn.classList.toggle('collected', now);
-        renderDecorCatalog(); // refresh counts
+        renderDecorCatalog();
       });
     });
   };
@@ -229,9 +227,9 @@
   $('decor-filter')?.addEventListener('change', renderDecorCatalog);
   $('decor-search')?.addEventListener('input', renderDecorCatalog);
 
-  // --- Collection Stats ---
+  // --- 收藏統計 ---
   const renderCollectionStats = () => {
-    if (!decorData) { $('collection-content').innerHTML = '<p style="padding:16px;color:#aaa">Loading...</p>'; return; }
+    if (!decorData) { $('collection-content').innerHTML = '<p style="padding:16px;color:#aaa">載入中...</p>'; return; }
     const stats = Collection.getStats(decorData.definitions);
     const marks = Collection.getAllMarks();
     const markCounts = {};
@@ -240,29 +238,29 @@
     $('collection-content').innerHTML = `
       <div class="stat-hero">
         <div class="stat-pct">${stats.pct}%</div>
-        <div class="stat-detail">${stats.collected} / ${stats.total} decors collected</div>
+        <div class="stat-detail">已收集 ${stats.collected} / ${stats.total} 個飾品</div>
         <div class="progress-bar"><div class="progress-fill" style="width:${stats.pct}%"></div></div>
       </div>
       <div class="stat-section">
-        <h3>📊 By Category</h3>
+        <h3>📊 各分類進度</h3>
         ${Object.entries(stats.byCat).map(([catId, s]) => {
           const def = decorData.definitions.find(d => d.category.id === catId);
-          const name = def ? (def.category.nameEn || def.category.name) : catId;
+          const name = def ? (def.category.name || def.category.nameEn) : catId;
           const icon = def?.category.icon || '📦';
           const p = s.total ? Math.round(s.collected / s.total * 100) : 0;
           return `<div class="stat-row"><span>${icon} ${name}</span><span>${s.collected}/${s.total} (${p}%)</span></div>`;
         }).join('')}
       </div>
       <div class="stat-section">
-        <h3>🗺️ Cell Marks</h3>
-        ${Object.entries(Collection.MARK_TYPES).map(([type, emoji]) =>
-          `<div class="stat-row"><span>${emoji} ${type}</span><span>${markCounts[type] || 0} cells</span></div>`
+        <h3>🗺️ 格子標記</h3>
+        ${Object.entries(MARK_LABELS).map(([type, label]) =>
+          `<div class="stat-row"><span>${label}</span><span>${markCounts[type] || 0} 格</span></div>`
         ).join('')}
       </div>
       <div class="stat-section">
-        <h3>⚙️ Data</h3>
-        <button class="action-btn" id="export-btn">📤 Export Data</button>
-        <button class="action-btn" id="import-btn">📥 Import Data</button>
+        <h3>⚙️ 資料管理</h3>
+        <button class="action-btn" id="export-btn">📤 匯出備份</button>
+        <button class="action-btn" id="import-btn">📥 匯入還原</button>
         <input type="file" id="import-file" accept=".json" style="display:none">
       </div>
     `;
@@ -271,7 +269,7 @@
       const data = { collection: Collection.loadCollection(), marks: Collection.getAllMarks(), exported: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `pikmin-s2-backup-${new Date().toISOString().slice(0,10)}.json`; a.click();
+      a.download = `pikmin-s2-備份-${new Date().toISOString().slice(0,10)}.json`; a.click();
     });
     $('import-btn')?.addEventListener('click', () => $('import-file').click());
     $('import-file')?.addEventListener('change', e => {
@@ -282,29 +280,25 @@
           const data = JSON.parse(reader.result);
           if (data.collection) localStorage.setItem('pikmin-s2-collection', JSON.stringify(data.collection));
           if (data.marks) localStorage.setItem('pikmin-s2-cell-marks', JSON.stringify(data.marks));
-          alert('Imported!'); renderCollectionStats();
-        } catch { alert('Invalid file'); }
+          alert('匯入成功！'); renderCollectionStats();
+        } catch { alert('檔案格式錯誤'); }
       };
       reader.readAsText(file);
     });
   };
 
-  // --- Load decor data ---
+  // --- 載入飾品資料 ---
   fetch('decor.json').then(r => r.json()).then(data => {
     decorData = data;
     if (currentTab === 'decor') renderDecorCatalog();
     if (currentTab === 'collection') renderCollectionStats();
   });
 
-  // --- Credits ---
-  $('credits-btn')?.addEventListener('click', () => {
-    $('credits-modal').classList.toggle('visible');
-  });
-  $('credits-close')?.addEventListener('click', () => {
-    $('credits-modal').classList.remove('visible');
-  });
+  // --- 致謝 ---
+  $('credits-btn')?.addEventListener('click', () => { $('credits-modal').classList.toggle('visible'); });
+  $('credits-close')?.addEventListener('click', () => { $('credits-modal').classList.remove('visible'); });
 
-  // --- Init ---
+  // --- 初始化 ---
   map.on('moveend', () => { renderCells(); if (poiEnabled) fetchAndShowPOIs(); });
   updateLevel();
   renderCells();

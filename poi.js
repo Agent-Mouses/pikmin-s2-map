@@ -49,7 +49,7 @@ const POI = (() => {
 
     for (let i = 0; i < SERVERS.length; i++) {
       const url = SERVERS[(serverIdx + i) % SERVERS.length];
-      if (onStatus) onStatus(`Querying POIs...`);
+      if (onStatus) onStatus(`查詢興趣點中...`);
       try {
         const res = await fetch(url, {
           method: 'POST', body: query,
