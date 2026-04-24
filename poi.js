@@ -69,7 +69,7 @@ const POI = (() => {
           if (!rule) continue;
           points.push({
             id: `${el.type}-${el.id}`, lat, lon,
-            name: el.tags.name || el.tags['name:zh'] || el.tags['name:zh-TW'] || el.tags['name:en'] || rule.nameEn,
+            name: el.tags.name || el.tags['name:zh'] || el.tags['name:zh-TW'] || el.tags['name:en'] || rule.name,
             decorId: rule.id, decorName: rule.name, decorIcon: rule.icon
           });
         }
