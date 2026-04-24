@@ -323,7 +323,7 @@
   };
 
   // --- 載入飾品資料 ---
-  fetch('decor.json').then(r => r.json()).then(data => {
+  fetch('decor.json?v=2').then(r => r.json()).then(data => {
     decorData = data;
     if (currentTab === 'decor') renderDecorCatalog();
     if (currentTab === 'collection') renderCollectionStats();
