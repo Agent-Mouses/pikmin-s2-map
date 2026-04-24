@@ -80,6 +80,21 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #222;font-size:12px}
 .action-btn{display:block;width:100%;padding:10px;margin-top:6px;background:#222;border:1px solid #444;border-radius:8px;color:#fff;font-size:13px;cursor:pointer;text-align:center}
 .action-btn:active{background:#333}
+/* Help panel */
+#panel-help{background:#111;color:#fff;overflow-y:auto}
+.help-content{padding:16px 14px 24px}
+.help-content h2{font-size:20px;margin-bottom:4px}
+.help-subtitle{font-size:12px;color:#aaa;margin-bottom:16px}
+.help-section{margin-bottom:20px}
+.help-section h3{font-size:15px;color:#3498db;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #333}
+.help-card{background:#1a1a1a;border-radius:8px;padding:12px;margin-bottom:8px}
+.help-card h4{font-size:13px;margin-bottom:6px;color:#e0e0e0}
+.help-card p{font-size:12px;line-height:1.7;color:#ccc;margin-bottom:6px}
+.help-card ul,.help-card ol{font-size:12px;line-height:1.7;color:#ccc;padding-left:20px;margin-bottom:6px}
+.help-card a{color:#3498db}
+.help-note{color:#f59e0b!important;font-size:11px!important}
+.help-table{width:100%;font-size:12px;margin:6px 0}
+.help-table td{padding:4px 8px;border-bottom:1px solid #333}
 /* Credits modal */
 .credits-modal{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.9);color:#fff;display:none;overflow-y:auto;padding:20px}
 .credits-modal.visible{display:block}
@@ -141,11 +156,113 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
   <div id="collection-content"></div>
 </div>
 
+<div class="tab-panel" id="panel-help">
+  <div class="help-content">
+    <h2>🌱 使用教學</h2>
+    <p class="help-subtitle">用手機瀏覽器直接開啟，不需要安裝 App。</p>
+
+    <div class="help-section">
+      <h3>🗺️ 地圖頁</h3>
+      <div class="help-card">
+        <h4>🎯 GPS 定位</h4>
+        <p>點右下角 <b>🎯</b> → 允許定位 → 你所在的格子會用青色高亮。再按一次關閉。</p>
+      </div>
+      <div class="help-card">
+        <h4>📐 切換 Level</h4>
+        <p>上方滑桿切換 <b>Level 12～20</b>。</p>
+        <ul>
+          <li><b>Level 17</b> = 皮克敏 Bloom 的格子（最常用）</li>
+          <li><b>Level 15</b> = Pokemon GO EX 團體戰格子</li>
+          <li>數字越大格子越小</li>
+        </ul>
+      </div>
+      <div class="help-card">
+        <h4>🔲 點擊格子</h4>
+        <p>點任何格子 → 底部彈出 Cell ID、Level、座標。點 Cell ID 可複製。</p>
+      </div>
+      <div class="help-card">
+        <h4>✅ 標記格子</h4>
+        <table class="help-table">
+          <tr><td>✅ farmed</td><td>已刷過的格子</td><td style="color:#4ade80">綠色</td></tr>
+          <tr><td>⏳ cooldown</td><td>CD 冷卻中</td><td style="color:#fbbf24">黃色</td></tr>
+          <tr><td>⭐ bookmark</td><td>想去但還沒去</td><td style="color:#f472b6">粉色</td></tr>
+        </table>
+        <p>點一次標記，再點一次取消。標記存在手機裡，關網頁不會消失。</p>
+      </div>
+      <div class="help-card">
+        <h4>📍 顯示 POI</h4>
+        <p>點 <b>📍</b> 開啟 → 從 OpenStreetMap 查詢附近餐廳、咖啡廳、公園、車站等，顯示對應飾品 emoji。再按一次關閉。</p>
+        <p class="help-note">⚠️ 需要網路，第一次可能要等幾秒。</p>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>📖 飾品圖鑑頁</h3>
+      <div class="help-card">
+        <p>所有 96 種飾品分類。點分類展開 → 點皮克敏圖示標記已收集（綠色邊框）→ 再點取消。</p>
+        <p>上方可篩選類型、搜尋名稱（中英文皆可）。</p>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>📊 統計頁</h3>
+      <div class="help-card">
+        <p>總收集進度 → 各分類收集狀態 → 格子標記統計。</p>
+        <p><b>📤 Export</b> 匯出 JSON 備份 ｜ <b>📥 Import</b> 匯入還原（換手機用）。</p>
+        <p class="help-note">💡 建議定期匯出備份，清除瀏覽器資料會遺失。</p>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>🎮 實戰刷盆流程</h3>
+      <div class="help-card">
+        <h4>出門前</h4>
+        <ol>
+          <li>GPS 定位 → 開 POI 看附近飾品點</li>
+          <li>找有多個格子的大純點（公園、百貨公司）</li>
+          <li>用 ⭐ bookmark 標記想去的格子</li>
+        </ol>
+        <h4>到現場</h4>
+        <ol>
+          <li>GPS 確認你在哪個格子</li>
+          <li>在格子裡走 <b>1,000～3,000 步</b>觸發掉落</li>
+          <li>刷完標記 ✅ farmed，CD 中標記 ⏳</li>
+          <li>移動到下一格繼續</li>
+        </ol>
+        <h4>回家後</h4>
+        <ol>
+          <li>Stats 頁看成果 → Decor 頁標記新飾品 → Export 備份</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>❓ 常見問題</h3>
+      <div class="help-card">
+        <p><b>Q: 顯示「Too many cells」？</b><br>放大地圖或降低 Level。</p>
+        <p><b>Q: POI 沒反應？</b><br>Overpass API 有速率限制，等幾秒再試。</p>
+        <p><b>Q: 換手機？</b><br>Stats 頁 Export → 新手機 Import。</p>
+        <p><b>Q: 跟 Pik-Tool 差在哪？</b><br>我們不需要帳號，資料存手機本地。多了 S2 多 Level 切換和格子標記。</p>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>ℹ️ 關於</h3>
+      <div class="help-card">
+        <p>非官方粉絲工具，與 Nintendo / Niantic 無關。</p>
+        <p>開源專案：<a href="https://github.com/Agent-Mouses/pikmin-s2-map" target="_blank">GitHub</a></p>
+        <p>飾品資料來自 <a href="https://github.com/scott0127/pik_tool" target="_blank">scott0127/pik_tool</a> (MIT)。完整致謝見地圖頁 ℹ️ 按鈕。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Tab bar -->
 <nav class="tab-bar">
   <button class="tab-btn active" data-tab="map"><span class="tab-icon">🗺️</span>Map</button>
   <button class="tab-btn" data-tab="decor"><span class="tab-icon">📖</span>Decor</button>
   <button class="tab-btn" data-tab="collection"><span class="tab-icon">📊</span>Stats</button>
+  <button class="tab-btn" data-tab="help"><span class="tab-icon">❓</span>Help</button>
 </nav>
 
 <!-- Credits modal -->
