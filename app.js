@@ -5,6 +5,7 @@
   let currentLevel = 17, currentTab = 'map';
   let cellLayer = null, userMarker = null, userCellHL = null, selCellHL = null;
   let poiLayer = null, poiEnabled = false, decorData = null;
+  let moveTimer = null, lastBounds = null;
   const LEVEL_COLORS = {
     12:'#e74c3c',13:'#e67e22',14:'#f1c40f',15:'#2ecc71',16:'#1abc9c',
     17:'#3498db',18:'#9b59b6',19:'#e91e63',20:'#795548'
@@ -43,9 +44,9 @@
     $('level-info').textContent = LEVEL_DESC[currentLevel] || '';
     slider.value = currentLevel;
   };
-  slider.addEventListener('input', e => { currentLevel = +e.target.value; updateLevel(); renderCells(); });
+  slider.addEventListener('input', e => { currentLevel = +e.target.value; updateLevel(); lastBounds = null; renderCells(); });
   document.querySelectorAll('.level-btn').forEach(b =>
-    b.addEventListener('click', () => { currentLevel = +b.dataset.level; updateLevel(); renderCells(); })
+    b.addEventListener('click', () => { currentLevel = +b.dataset.level; updateLevel(); lastBounds = null; renderCells(); })
   );
 
   // --- 格子渲染 ---
@@ -294,17 +295,38 @@
       </div>
       <div class="stat-section">
         <h3>⚙️ 資料管理</h3>
-        <button class="action-btn" id="export-btn">📤 匯出備份</button>
-        <button class="action-btn" id="import-btn">📥 匯入還原</button>
+        <button class="action-btn" id="export-copy-btn">📋 複製備份到剪貼簿</button>
+        <button class="action-btn" id="export-btn" style="opacity:0.7;font-size:12px">📤 下載 JSON 檔案</button>
+        <button class="action-btn" id="import-paste-btn">📋 從剪貼簿貼上還原</button>
+        <button class="action-btn" id="import-btn" style="opacity:0.7;font-size:12px">📥 選擇 JSON 檔案</button>
         <input type="file" id="import-file" accept=".json" style="display:none">
+        <p style="font-size:11px;color:#888;margin-top:8px;line-height:1.5">💡 iPhone 建議：複製備份 → 貼到備忘錄或 LINE 給自己保存。還原時複製該文字 → 點「從剪貼簿貼上還原」。</p>
       </div>
     `;
 
+    const exportData = () => ({ collection: Collection.loadCollection(), marks: Collection.getAllMarks(), exported: new Date().toISOString() });
+
+    $('export-copy-btn')?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(exportData()));
+        $('export-copy-btn').textContent = '✅ 已複製！';
+        setTimeout(() => { $('export-copy-btn').textContent = '📋 複製備份到剪貼簿'; }, 2000);
+      } catch { alert('複製失敗，請改用下載方式'); }
+    });
     $('export-btn')?.addEventListener('click', () => {
-      const data = { collection: Collection.loadCollection(), marks: Collection.getAllMarks(), exported: new Date().toISOString() };
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(exportData(), null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
       a.download = `pikmin-s2-備份-${new Date().toISOString().slice(0,10)}.json`; a.click();
+    });
+    $('import-paste-btn')?.addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        const data = JSON.parse(text);
+        if (!data.collection && !data.marks) throw new Error('invalid');
+        if (data.collection) localStorage.setItem('pikmin-s2-collection', JSON.stringify(data.collection));
+        if (data.marks) localStorage.setItem('pikmin-s2-cell-marks', JSON.stringify(data.marks));
+        alert('匯入成功！'); renderCollectionStats();
+      } catch { alert('剪貼簿內容不是有效的備份資料'); }
     });
     $('import-btn')?.addEventListener('click', () => $('import-file').click());
     $('import-file')?.addEventListener('change', e => {
@@ -334,7 +356,13 @@
   $('credits-close')?.addEventListener('click', () => { $('credits-modal').classList.remove('visible'); });
 
   // --- 初始化 ---
-  map.on('moveend', () => { renderCells(); if (poiEnabled) fetchAndShowPOIs(); });
+  const boundsKey = () => { const b = map.getBounds(); return `${b.getSouth().toFixed(4)},${b.getWest().toFixed(4)},${b.getNorth().toFixed(4)},${b.getEast().toFixed(4)},${currentLevel}`; };
+  map.on('moveend', () => {
+    const bk = boundsKey();
+    if (bk === lastBounds) return;
+    clearTimeout(moveTimer);
+    moveTimer = setTimeout(() => { lastBounds = bk; renderCells(); if (poiEnabled) fetchAndShowPOIs(); }, 150);
+  });
   updateLevel();
   renderCells();
 })();

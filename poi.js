@@ -8,6 +8,36 @@ const POI = (() => {
   ];
   let serverIdx = 0, lastReq = 0, abortCtrl = null;
 
+  // --- Cache: localStorage + TTL (30 min) ---
+  const CACHE_KEY = 'pikmin-s2-poi-cache';
+  const CACHE_TTL = 30 * 60 * 1000;
+  const CACHE_MAX = 20;
+
+  const cacheKey = (bounds) => `${bounds.south.toFixed(3)},${bounds.west.toFixed(3)},${bounds.north.toFixed(3)},${bounds.east.toFixed(3)}`;
+
+  const loadCache = () => { try { return JSON.parse(localStorage.getItem(CACHE_KEY)) || {}; } catch { return {}; } };
+  const saveCache = (c) => { try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch { /* quota */ } };
+
+  const getCached = (key) => {
+    const c = loadCache();
+    const entry = c[key];
+    if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data;
+    if (entry) { delete c[key]; saveCache(c); }
+    return null;
+  };
+
+  const setCache = (key, data) => {
+    const c = loadCache();
+    c[key] = { data, ts: Date.now() };
+    // evict oldest if over limit
+    const keys = Object.keys(c);
+    if (keys.length > CACHE_MAX) {
+      keys.sort((a, b) => c[a].ts - c[b].ts);
+      keys.slice(0, keys.length - CACHE_MAX).forEach(k => delete c[k]);
+    }
+    saveCache(c);
+  };
+
   const buildQuery = (bounds, rules) => {
     const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
     const queries = [];
@@ -37,6 +67,10 @@ const POI = (() => {
   const fetchPOIs = async (bounds, rules, onStatus) => {
     if (abortCtrl) abortCtrl.abort();
     abortCtrl = new AbortController();
+
+    const ck = cacheKey(bounds);
+    const cached = getCached(ck);
+    if (cached) return cached;
 
     const now = Date.now();
     if (now - lastReq < 2000) await new Promise(r => setTimeout(r, 2000 - (now - lastReq)));
@@ -73,6 +107,7 @@ const POI = (() => {
             decorId: rule.id, decorName: rule.name, decorIcon: rule.icon
           });
         }
+        setCache(ck, points);
         return points;
       } catch (e) {
         if (e.name === 'AbortError') return [];
