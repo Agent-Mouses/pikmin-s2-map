@@ -214,24 +214,61 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
     </div>
 
     <div class="help-section">
-      <h3>🎮 實戰刷盆流程</h3>
+      <h3>🌱 飾品皮克敏基礎知識</h3>
       <div class="help-card">
-        <h4>出門前</h4>
+        <h4>什麼是飾品皮克敏？</h4>
+        <p>飾品皮克敏（Decor Pikmin）是穿著特殊服裝的皮克敏。服裝類型由<b>苗的發現地點</b>決定 — 在餐廳附近找到的苗會長出戴廚師帽的皮克敏，在公園找到的會拿三葉草。</p>
+        <p>遊戲用 <b>OpenStreetMap</b> 和 <b>Foursquare</b> 的地圖資料判斷地點類型，這也是我們 POI 圖層的資料來源。</p>
+      </div>
+      <div class="help-card">
+        <h4>怎麼取得飾品皮克敏？</h4>
+        <ul>
+          <li><b>巨大苗</b> — 探險或升級獲得，需走 <b>10,000 步</b>孵化，拔出即為飾品皮克敏</li>
+          <li><b>好感度 4 顆心</b> — 餵花蜜、派探險提升好感度，滿 4 心後皮克敏會回到發現地取回禮物，穿上飾品</li>
+          <li><b>金色苗</b> — 活動、週挑戰、特殊地點獲得，只需 <b>100 步</b>即可孵化</li>
+        </ul>
+      </div>
+      <div class="help-card">
+        <h4>S2 Cell 是什麼？跟刷盆有什麼關係？</h4>
+        <p>S2 Cell 是 Google 開發的球面網格系統，Niantic 的遊戲（Pikmin Bloom、Pokemon GO）都用它來劃分地理區域。</p>
+        <ul>
+          <li><b>Level 17</b>（~150m）= 皮克敏 Bloom 判斷飾品類型的格子大小</li>
+          <li>每個 L17 格子內的 POI 決定了該區域可以掉落的飾品種類</li>
+          <li>在不同格子之間移動，可以接觸到不同的飾品類型</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>🎮 搭配本工具的刷盆流程</h3>
+      <div class="help-card">
+        <h4>📋 第一步：規劃路線（出門前）</h4>
         <ol>
-          <li>GPS 定位 → 開 POI 看附近飾品點</li>
-          <li>找有多個格子的大純點（公園、百貨公司）</li>
-          <li>用 ⭐ 收藏標記想去的格子</li>
+          <li>開啟本工具，GPS 定位你的位置</li>
+          <li>點 <b>📍</b> 開啟 POI 圖層，查看附近有哪些飾品點</li>
+          <li>找出你缺少的飾品類型（對照圖鑑頁）</li>
+          <li>用 <b>⭐ 收藏</b>標記想去的格子</li>
+          <li>💡 優先選擇有多種 POI 的大地點（公園、百貨公司、車站周邊）</li>
         </ol>
-        <h4>到現場</h4>
+      </div>
+      <div class="help-card">
+        <h4>🚶 第二步：實地刷盆（到現場）</h4>
         <ol>
-          <li>GPS 確認你在哪個格子</li>
-          <li>在格子裡走 <b>1,000～3,000 步</b>觸發掉落</li>
-          <li>刷完標記 ✅ 已刷，CD 中標記 ⏳</li>
-          <li>移動到下一格繼續</li>
+          <li>開啟皮克敏 Bloom app，確認背包有空位放苗</li>
+          <li>回到本工具，GPS 確認你在哪個 L17 格子</li>
+          <li>在目標格子內走動，累積步數觸發苗掉落</li>
+          <li>使用遊戲內的<b>探測器</b>可以看到附近可獲得的飾品類型，並保證至少掉一顆對應的苗</li>
+          <li>刷完的格子標記 <b>✅ 已刷</b>，還在冷卻的標記 <b>⏳</b></li>
+          <li>移動到下一個 ⭐ 收藏的格子繼續</li>
         </ol>
-        <h4>回家後</h4>
+      </div>
+      <div class="help-card">
+        <h4>🏠 第三步：整理收穫（回家後）</h4>
         <ol>
-          <li>統計頁看成果 → 圖鑑頁標記新飾品 → 匯出備份</li>
+          <li>在皮克敏 Bloom 中孵化苗（巨大苗需 10,000 步，金色苗只需 100 步）</li>
+          <li>持續餵花蜜提升好感度，4 心後可取得飾品</li>
+          <li>回到本工具 → 圖鑑頁標記新收集的飾品</li>
+          <li>統計頁查看整體進度 → 匯出備份</li>
         </ol>
       </div>
     </div>
@@ -240,8 +277,9 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
       <h3>❓ 常見問題</h3>
       <div class="help-card">
         <p><b>Q: 顯示「格子太多」？</b><br>放大地圖或降低 Level。</p>
-        <p><b>Q: POI 沒反應？</b><br>Overpass API 有速率限制，等幾秒再試。</p>
-        <p><b>Q: 換手機？</b><br>統計頁匯出備份 → 新手機匯入還原。</p>
+        <p><b>Q: POI 沒反應？</b><br>第一次載入需要幾秒，之後移動地圖會即時顯示。如果完全沒反應，可能是 Overpass API 暫時限流，等幾秒再試。</p>
+        <p><b>Q: 換手機？</b><br>統計頁 → 複製備份到剪貼簿 → 新手機貼上還原。</p>
+        <p><b>Q: 飾品類型跟地圖上的 POI 不一樣？</b><br>遊戲同時使用 OpenStreetMap 和 Foursquare 資料，我們的 POI 只顯示 OSM 資料，可能有差異。</p>
         <p><b>Q: 跟 Pik-Tool 差在哪？</b><br>我們不需要帳號，資料存手機本地。多了 S2 多 Level 切換和格子標記。</p>
       </div>
     </div>
