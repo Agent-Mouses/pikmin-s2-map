@@ -11,11 +11,13 @@
     17:'#3498db',18:'#9b59b6',19:'#e91e63',20:'#795548'
   };
   const LEVEL_DESC = {
-    12:'區域級',13:'城市級',14:'行政區',15:'社區級',16:'街區 (~300m)',
-    17:'皮克敏 (~150m)',18:'精細 (~75m)',19:'極細 (~38m)',20:'超細 (~19m)'
+    12:'區域級',13:'城市級',14:'行政區',15:'社區級',16:'街區 (~150m)',
+    17:'飾品格 (~50-70m) 🌱',18:'精細 (~30m)',19:'極細 (~15m)',20:'超細 (~8m)'
   };
-  const MARK_COLORS = { farmed: '#4ade80', cooldown: '#fbbf24', bookmark: '#f472b6' };
-  const MARK_LABELS = { farmed: '✅ 已刷', cooldown: '⏳ 冷卻中', bookmark: '⭐ 收藏' };
+  const MARK_COLORS = { farmed: '#4ade80', cd_seed: '#fbbf24', cd_fruit: '#fb923c', cd_both: '#ef4444', bookmark: '#f472b6' };
+  const MARK_LABELS = { cd_seed: '🌱 盆CD', cd_fruit: '🍎 果CD', farmed: '✅ 已刷', bookmark: '⭐ 收藏' };
+  const fmtMs = (ms) => { const h = Math.floor(ms/3600000), m = Math.floor(ms%3600000/60000); return `${h}h ${m}m`; };
+  let cdInterval = null;
 
   const $ = (id) => document.getElementById(id);
 
@@ -93,16 +95,30 @@
     const center = S2.cellCenter(cell);
     const id = S2.cellId(cell);
     const mark = Collection.getCellMark(key);
-    const markBtns = Object.entries(MARK_LABELS).map(([type, label]) =>
-      `<button class="mark-btn ${mark === type ? 'active' : ''}" data-mark="${type}" data-key="${key}">${label}</button>`
-    ).join('');
+    const cdSeed = Collection.getCooldownRemaining(key, 'cd_seed');
+    const cdFruit = Collection.getCooldownRemaining(key, 'cd_fruit');
+    const cdRows = [
+      cdSeed > 0 ? `<div class="info-row"><span class="info-label">🌱 盆 CD</span><span class="info-value cd-timer" data-cd="cd_seed">${fmtMs(cdSeed)}</span></div>` : '',
+      cdFruit > 0 ? `<div class="info-row"><span class="info-label">🍎 果 CD</span><span class="info-value cd-timer" data-cd="cd_fruit">${fmtMs(cdFruit)}</span></div>` : ''
+    ].join('');
+    const markBtns = Object.entries(MARK_LABELS).map(([type, label]) => {
+      const active = type === mark || (type === 'cd_seed' && (mark === 'cd_seed' || mark === 'cd_both'))
+        || (type === 'cd_fruit' && (mark === 'cd_fruit' || mark === 'cd_both'));
+      return `<button class="mark-btn ${active ? 'active' : ''}" data-mark="${type}" data-key="${key}">${label}</button>`;
+    }).join('');
+
+    const curDecor = Collection.getCellDecor(key);
+    const decorOpts = DECOR_RULES.map(r => `<option value="${r.icon} ${r.name}" ${curDecor === `${r.icon} ${r.name}` ? 'selected' : ''}>${r.icon} ${r.name}</option>`).join('');
 
     $('info-content').innerHTML = `
       <div class="info-row"><span class="info-label">格子 ID</span><span class="info-value clickable" title="點擊複製">${id}</span></div>
       <div class="info-row"><span class="info-label">等級</span><span class="info-value">${currentLevel}</span></div>
       <div class="info-row"><span class="info-label">中心座標</span><span class="info-value">${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}</span></div>
+      ${cdRows}
+      <select class="decor-select" id="cell-decor-select"><option value="">— 飾品類型 —</option>${decorOpts}</select>
       <div class="mark-row">${markBtns}</div>
     `;
+    $('cell-decor-select').addEventListener('change', e => Collection.setCellDecor(key, e.target.value));
     $('info-content').querySelector('.clickable').onclick = () => navigator.clipboard.writeText(id);
     $('info-content').querySelectorAll('.mark-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -112,15 +128,28 @@
       });
     });
     $('info-panel').classList.add('visible');
+    // live countdown
+    clearInterval(cdInterval);
+    const hasCD = (cdSeed > 0) || (cdFruit > 0);
+    if (hasCD) cdInterval = setInterval(() => {
+      let any = false;
+      for (const t of ['cd_seed', 'cd_fruit']) {
+        const r = Collection.getCooldownRemaining(key, t);
+        const el = $('info-content')?.querySelector(`.cd-timer[data-cd="${t}"]`);
+        if (el && r > 0) { el.textContent = fmtMs(r); any = true; }
+      }
+      if (!any) { clearInterval(cdInterval); renderCells(); showCellInfo(cell, corners, key); }
+    }, 60000);
   };
 
   $('info-close').addEventListener('click', () => {
     $('info-panel').classList.remove('visible');
+    clearInterval(cdInterval);
     if (selCellHL) { map.removeLayer(selCellHL); selCellHL = null; }
   });
 
   // --- GPS ---
-  let watchId = null;
+  let watchId = null, detectorCircle = null;
   const highlightUserCell = (lat, lng) => {
     if (userCellHL) map.removeLayer(userCellHL);
     const cell = S2.cellFromLatLng(lat, lng, currentLevel);
@@ -135,6 +164,7 @@
       $('gps-btn').classList.remove('active');
       if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
       if (userCellHL) { map.removeLayer(userCellHL); userCellHL = null; }
+      if (detectorCircle) { map.removeLayer(detectorCircle); detectorCircle = null; }
       return;
     }
     if (!navigator.geolocation) return alert('此裝置不支援定位功能');
@@ -147,6 +177,10 @@
           map.setView([lat, lng], Math.max(map.getZoom(), 16));
         } else userMarker.setLatLng([lat, lng]);
         highlightUserCell(lat, lng);
+        // detector 100m circle
+        if (!detectorCircle) {
+          detectorCircle = L.circle([lat, lng], { radius: 100, color: '#00e5ff', weight: 1, opacity: 0.4, fillOpacity: 0.06, dashArray: '6,4', interactive: false }).addTo(map);
+        } else detectorCircle.setLatLng([lat, lng]);
       },
       err => { alert('定位失敗：' + err.message); $('gps-btn').classList.remove('active'); watchId = null; },
       { enableHighAccuracy: true, maximumAge: 5000 }
@@ -298,7 +332,7 @@
       </div>
       <div class="stat-section">
         <h3>🗺️ 格子標記</h3>
-        ${Object.entries(MARK_LABELS).map(([type, label]) =>
+        ${[...Object.entries(MARK_LABELS), ['cd_both', '🔴 盆+果CD']].map(([type, label]) =>
           `<div class="stat-row"><span>${label}</span><span>${markCounts[type] || 0} 格</span></div>`
         ).join('')}
       </div>
@@ -364,6 +398,15 @@
   $('credits-btn')?.addEventListener('click', () => { $('credits-modal').classList.toggle('visible'); });
   $('credits-close')?.addEventListener('click', () => { $('credits-modal').classList.remove('visible'); });
 
+  // --- 每日盆計數 ---
+  const updateDailyUI = () => { const c = Collection.getDailyCount(); $('daily-count').textContent = `🌱 ${c}/15`; $('daily-count').style.color = c >= 15 ? '#ef4444' : '#4ade80'; };
+  let dailyTimer = null;
+  $('daily-count').addEventListener('click', () => { Collection.bumpDaily(); updateDailyUI(); });
+  $('daily-count').addEventListener('contextmenu', e => { e.preventDefault(); Collection.resetDaily(); updateDailyUI(); });
+  // long press for mobile
+  $('daily-count').addEventListener('touchstart', () => { dailyTimer = setTimeout(() => { Collection.resetDaily(); updateDailyUI(); }, 600); }, { passive: true });
+  $('daily-count').addEventListener('touchend', () => clearTimeout(dailyTimer));
+
   // --- 初始化 ---
   const boundsKey = () => { const b = map.getBounds(); return `${b.getSouth().toFixed(4)},${b.getWest().toFixed(4)},${b.getNorth().toFixed(4)},${b.getEast().toFixed(4)},${currentLevel}`; };
   map.on('moveend', () => {
@@ -373,5 +416,6 @@
     moveTimer = setTimeout(() => { lastBounds = bk; renderCells(); if (poiEnabled) refreshPOIs(); }, 150);
   });
   updateLevel();
+  updateDailyUI();
   renderCells();
 })();

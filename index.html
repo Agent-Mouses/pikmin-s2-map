@@ -23,6 +23,8 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .top-bar{background:rgba(0,0,0,0.85);color:#fff;padding:6px 12px;display:flex;align-items:center;gap:8px;backdrop-filter:blur(8px)}
 .top-bar h1{font-size:13px;white-space:nowrap}
 .cell-count{font-size:10px;color:#aaa;margin-left:auto}
+.daily-count{font-size:10px;color:#4ade80;cursor:pointer;user-select:none;margin-left:auto;padding:2px 6px;border-radius:4px;background:rgba(74,222,128,0.1)}
+.decor-select{width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:5px 8px;font-size:11px;margin-bottom:4px}
 .level-control{background:rgba(0,0,0,0.8);padding:5px 12px;display:flex;align-items:center;gap:6px;backdrop-filter:blur(8px)}
 .level-text{color:#fff;font-size:12px;font-weight:600;min-width:28px}
 .level-desc{color:#aaa;font-size:10px;min-width:70px}
@@ -114,12 +116,13 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
   <div class="map-controls">
     <div class="top-bar">
       <h1>🌱 皮克敏 S2 地圖</h1>
+      <span class="daily-count" id="daily-count" title="今日盆數（點擊+1，長按歸零）">🌱 0/15</span>
       <span class="cell-count" id="cell-count">—</span>
     </div>
     <div class="level-control">
       <span class="level-text" id="level-display">L17</span>
       <input type="range" id="level-slider" min="12" max="20" value="17" step="1">
-      <span class="level-desc" id="level-info">皮克敏 (~150m)</span>
+      <span class="level-desc" id="level-info">飾品格 (~50-70m) 🌱</span>
       <div class="quick-levels">
         <button class="level-btn" data-level="15">15</button>
         <button class="level-btn" data-level="17">17</button>
@@ -171,7 +174,7 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
         <h4>📐 切換 Level</h4>
         <p>上方滑桿切換 <b>Level 12～20</b>。</p>
         <ul>
-          <li><b>Level 17</b> = 皮克敏 Bloom 的格子（最常用）</li>
+          <li><b>Level 17</b> = 皮克敏 Bloom 的飾品格子（~50-70m，最常用）</li>
           <li><b>Level 15</b> = Pokemon GO EX 團體戰格子</li>
           <li>數字越大格子越小</li>
         </ul>
@@ -183,11 +186,13 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
       <div class="help-card">
         <h4>✅ 標記格子</h4>
         <table class="help-table">
+          <tr><td>🌱 盆CD</td><td>盆冷卻中（24h）</td><td style="color:#fbbf24">黃色</td></tr>
+          <tr><td>🍎 果CD</td><td>水果冷卻中（24h）</td><td style="color:#fb923c">橘色</td></tr>
           <tr><td>✅ 已刷</td><td>已刷過的格子</td><td style="color:#4ade80">綠色</td></tr>
-          <tr><td>⏳ 冷卻中</td><td>CD 冷卻中</td><td style="color:#fbbf24">黃色</td></tr>
           <tr><td>⭐ 收藏</td><td>想去但還沒去</td><td style="color:#f472b6">粉色</td></tr>
         </table>
-        <p>點一次標記，再點一次取消。標記存在手機裡，關網頁不會消失。</p>
+        <p>點一次標記，再點一次取消。盆和水果 CD 獨立追蹤，24h 後自動過期變已刷。</p>
+        <p>點格子還可以標記該格的飾品類型（如咖啡、餐廳等）。</p>
       </div>
       <div class="help-card">
         <h4>📍 顯示 POI</h4>
@@ -240,23 +245,26 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
         <p class="help-note">💡 種花時孵化速度加快（最高 +30%）。每日步數上限 50,000 步。</p>
       </div>
       <div class="help-card">
-        <h4>⏳ 格子冷卻與掉苗機制</h4>
-        <p>Niantic <b>未公開</b>格子冷卻的確切機制。以下是社群觀察：</p>
+        <h4>⏳ 格子冷卻與掉苗機制（社群實測）</h4>
+        <p>以下來自社群玩家 <b>@ai.jc_</b> 的實測研究：</p>
         <ul>
-          <li>苗主要透過<b>探險（Expedition）</b>取得，走路時附近會出現可撿取的苗和水果</li>
-          <li>同一區域短時間內重複走動，掉落率可能降低（社群觀察，未證實）</li>
-          <li><b>探測器</b>每天免費 1 次（午夜重置），保證至少掉 1 顆附近飾品類型的苗</li>
-          <li>移動到<b>不同格子</b>可接觸不同 POI，增加取得稀有飾品的機會</li>
+          <li>每個 L17 格子有<b>固定飾品類型</b>（Fixed Drop），格子內只會掉該系列的盆</li>
+          <li>拿完該格的盆後進入 <b>CD（冷卻）</b>，CD 中只會出路邊盆</li>
+          <li><b>盆和水果各有獨立 CD</b>，不共通</li>
+          <li>每日最多可拿 <b>15 盆</b></li>
+          <li>探測器範圍：當前位置 <b>100m 半徑</b>內的格子中心，每移動 <b>25m</b> 刷新清單</li>
+          <li>效率：約 <b>5-10 分鐘</b>一盆（不用種花）</li>
         </ul>
-        <p class="help-note">⚠️ 本工具的 ⏳ 冷卻標記是給你自己記錄用的，不代表遊戲內的實際冷卻狀態。</p>
+        <p class="help-note">⚠️ 以上為社群實測，非官方公開資訊，可能隨版本更新而改變。</p>
       </div>
       <div class="help-card">
         <h4>S2 Cell 是什麼？跟刷盆有什麼關係？</h4>
         <p>S2 Cell 是 Google 開發的球面網格系統，Niantic 的遊戲（Pikmin Bloom、Pokemon GO）都用它來劃分地理區域。</p>
         <ul>
-          <li><b>Level 17</b>（~150m）= 皮克敏 Bloom 判斷飾品類型的格子大小</li>
-          <li>每個 L17 格子內的 POI 決定了該區域可以掉落的飾品種類</li>
+          <li><b>Level 17</b>（~50-70m）= 皮克敏 Bloom 判斷飾品類型的格子大小</li>
+          <li>每個 L17 格子有固定的飾品類型，由格子內的 POI 決定</li>
           <li>在不同格子之間移動，可以接觸到不同的飾品類型</li>
+          <li>GPS 開啟時會顯示探測器 100m 範圍圈</li>
         </ul>
       </div>
     </div>
