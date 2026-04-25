@@ -243,7 +243,7 @@
       const decorId = [...decors][0];
       const rule = DECOR_RULES.find(r => r.id === decorId);
       const corners = S2.cellCorners(cell).map(c => [c.lat, c.lng]);
-      const poly = L.polygon(corners, { color: '#facc15', weight: 2.5, opacity: 0.9, fillOpacity: 0.3, fillColor: '#facc15', interactive: false });
+      const poly = L.polygon(corners, { color: '#a78bfa', weight: 2, opacity: 0.85, fillOpacity: 0.12, fillColor: '#a78bfa', dashArray: '6,4', interactive: false });
       pureLayer.addLayer(poly);
       const center = S2.cellCenter(cell);
       const label = L.marker([center.lat, center.lng], {
@@ -324,10 +324,10 @@
       const variantHtml = def.variants.map(v => {
         const pikminHtml = def.availablePikminTypes.map(pt => {
           const itemId = `${cat.id}_${v.id}_${pt}`;
-          const collected = !!coll[itemId];
-          catTotal++; if (collected) catCollected++;
+          const missing = !!coll[itemId]; // coll 裡有記錄 = 未蒐集
+          catTotal++; if (!missing) catCollected++;
           const imgUrl = v.imageUrls?.[pt] || v.imageUrl || '';
-          return `<button class="pikmin-btn ${collected ? 'collected' : ''}" data-item="${itemId}" title="${pt}">
+          return `<button class="pikmin-btn ${missing ? 'not-collected' : 'collected'}" data-item="${itemId}" title="${pt}">
             ${imgUrl ? `<img src="${imgUrl}" alt="${pt}" loading="lazy">` : `<span class="pt-label">${pt[0].toUpperCase()}</span>`}
           </button>`;
         }).join('');
@@ -343,8 +343,9 @@
 
     $('decor-list').querySelectorAll('.pikmin-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const now = Collection.toggle(btn.dataset.item);
-        btn.classList.toggle('collected', now);
+        const isMissing = Collection.toggleMissing(btn.dataset.item);
+        btn.classList.toggle('not-collected', isMissing);
+        btn.classList.toggle('collected', !isMissing);
         renderDecorCatalog();
       });
     });

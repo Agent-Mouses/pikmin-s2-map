@@ -9,12 +9,13 @@ const Collection = (() => {
   };
   const saveCollection = (data) => localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 
-  const isCollected = (itemId) => !!loadCollection()[itemId];
-  const toggle = (itemId) => {
+  // 反轉邏輯：localStorage 記錄的是「未蒐集」的項目，沒記錄 = 已蒐集
+  const isCollected = (itemId) => !loadCollection()[itemId];
+  const toggleMissing = (itemId) => {
     const c = loadCollection();
     c[itemId] ? delete c[itemId] : c[itemId] = Date.now();
     saveCollection(c);
-    return !!c[itemId];
+    return !!c[itemId]; // true = 標記為未蒐集
   };
   const getStats = (decorData) => {
     const c = loadCollection();
@@ -28,7 +29,7 @@ const Collection = (() => {
           const id = `${catId}_${variant.id}_${pType}`;
           total++;
           byCat[catId].total++;
-          if (c[id]) { collected++; byCat[catId].collected++; }
+          if (!c[id]) { collected++; byCat[catId].collected++; }
         }
       }
     }
@@ -140,5 +141,5 @@ const Collection = (() => {
     saveMarks(marks);
   };
 
-  return { isCollected, toggle, getStats, getCellMark, setCellMark, getCooldownRemaining, getAllMarks, loadCollection, getDailyCount, bumpDaily, resetDaily, getCellDecor, setCellDecor };
+  return { isCollected, toggleMissing, getStats, getCellMark, setCellMark, getCooldownRemaining, getAllMarks, loadCollection, getDailyCount, bumpDaily, resetDaily, getCellDecor, setCellDecor };
 })();
