@@ -13,7 +13,7 @@ const POI = (() => {
   const CACHE_TTL = 30 * 60 * 1000;
   const CACHE_MAX = 20;
 
-  const cacheKey = (bounds) => `${bounds.south.toFixed(3)},${bounds.west.toFixed(3)},${bounds.north.toFixed(3)},${bounds.east.toFixed(3)}`;
+  const cacheKey = (bounds) => `${bounds.south.toFixed(4)},${bounds.west.toFixed(4)},${bounds.north.toFixed(4)},${bounds.east.toFixed(4)}`;
 
   const loadCache = () => { try { return JSON.parse(localStorage.getItem(CACHE_KEY)) || {}; } catch { return {}; } };
   const saveCache = (c) => { try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch { /* quota */ } };
@@ -29,7 +29,6 @@ const POI = (() => {
   const setCache = (key, data) => {
     const c = loadCache();
     c[key] = { data, ts: Date.now() };
-    // evict oldest if over limit
     const keys = Object.keys(c);
     if (keys.length > CACHE_MAX) {
       keys.sort((a, b) => c[a].ts - c[b].ts);
@@ -38,20 +37,43 @@ const POI = (() => {
     saveCache(c);
   };
 
+  // Ensure bbox is at least ~500m so zoomed-in views still get results
+  const padBounds = (bounds) => {
+    const MIN_SPAN = 0.005; // ~500m
+    const latSpan = bounds.north - bounds.south;
+    const lngSpan = bounds.east - bounds.west;
+    const latPad = latSpan < MIN_SPAN ? (MIN_SPAN - latSpan) / 2 : 0;
+    const lngPad = lngSpan < MIN_SPAN ? (MIN_SPAN - lngSpan) / 2 : 0;
+    return latPad || lngPad ? {
+      south: bounds.south - latPad, north: bounds.north + latPad,
+      west: bounds.west - lngPad, east: bounds.east + lngPad
+    } : bounds;
+  };
+
+  // Build compact Overpass query: group tags by key to use regex
   const buildQuery = (bounds, rules) => {
-    const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
-    const queries = [];
+    const b = padBounds(bounds);
+    const bbox = `${b.south},${b.west},${b.north},${b.east}`;
+    // Group: key → Set of values
+    const grouped = new Map();
     for (const rule of rules) {
       for (const tag of rule.tags) {
         const [k, v] = tag.split('=');
         if (k && v) {
-          queries.push(`  node["${k}"="${v}"](${bbox});`);
-          queries.push(`  way["${k}"="${v}"](${bbox});`);
+          if (!grouped.has(k)) grouped.set(k, new Set());
+          grouped.get(k).add(v);
         }
       }
     }
-    if (!queries.length) return '';
-    return `[out:json][timeout:30];\n(\n${queries.join('\n')}\n);\nout center;`;
+    if (!grouped.size) return '';
+    const parts = [];
+    for (const [k, vals] of grouped) {
+      const filter = vals.size === 1
+        ? `["${k}"="${[...vals][0]}"]`
+        : `["${k}"~"^(${[...vals].join('|')})$"]`;
+      parts.push(`  nw${filter}(${bbox});`);
+    }
+    return `[out:json][timeout:25];\n(\n${parts.join('\n')}\n);\nout center qt 500;`;
   };
 
   const matchRule = (tags, rulesMap) => {
