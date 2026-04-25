@@ -5,6 +5,7 @@
   let currentLevel = 17, currentTab = 'map';
   let cellLayer = null, userMarker = null, userCellHL = null, selCellHL = null;
   let poiLayer = null, poiEnabled = false, decorData = null;
+  let pureLayer = null, pureEnabled = false;
   let moveTimer = null, lastBounds = null;
   const LEVEL_COLORS = {
     12:'#e74c3c',13:'#e67e22',14:'#f1c40f',15:'#2ecc71',16:'#1abc9c',
@@ -207,9 +208,9 @@
   const refreshPOIs = () => {
     if (!poiEnabled) return;
     const { points, loading } = POI.getPOIs(viewBounds(), poiRules(), (updated) => {
-      // Background fetch done — refresh display
       renderPOILayer(updated);
       $('poi-toggle').textContent = '📍';
+      if (pureEnabled) analyzePureCells();
     });
     renderPOILayer(points);
     $('poi-toggle').textContent = loading ? '⏳' : '📍';
@@ -219,7 +220,53 @@
     poiEnabled = !poiEnabled;
     $('poi-toggle').classList.toggle('active', poiEnabled);
     if (poiEnabled) { refreshPOIs(); }
-    else if (poiLayer) { map.removeLayer(poiLayer); poiLayer = null; POI.clear(); }
+    else { if (poiLayer) { map.removeLayer(poiLayer); poiLayer = null; } POI.clear(); if (pureEnabled) { pureEnabled = false; $('pure-toggle').classList.remove('active'); if (pureLayer) { map.removeLayer(pureLayer); pureLayer = null; } } }
+  });
+
+  // --- 純點搜尋 ---
+  const analyzePureCells = () => {
+    if (pureLayer) map.removeLayer(pureLayer);
+    pureLayer = L.featureGroup();
+    const points = POI.filterInBounds(viewBounds());
+    // group POIs by L17 cell
+    const cells = new Map();
+    for (const p of points) {
+      const cell = S2.cellFromLatLng(p.lat, p.lon, 17);
+      const k = S2.cellKey(cell);
+      if (!cells.has(k)) cells.set(k, { cell, decors: new Set() });
+      cells.get(k).decors.add(p.decorId);
+    }
+    let count = 0;
+    cells.forEach(({ cell, decors }) => {
+      if (decors.size !== 1) return;
+      count++;
+      const decorId = [...decors][0];
+      const rule = DECOR_RULES.find(r => r.id === decorId);
+      const corners = S2.cellCorners(cell).map(c => [c.lat, c.lng]);
+      const poly = L.polygon(corners, { color: '#facc15', weight: 2.5, opacity: 0.9, fillOpacity: 0.3, fillColor: '#facc15', interactive: false });
+      pureLayer.addLayer(poly);
+      const center = S2.cellCenter(cell);
+      const label = L.marker([center.lat, center.lng], {
+        icon: L.divIcon({ className: 'poi-icon', html: `<span style="font-size:16px">${rule?.icon || '📦'}</span>`, iconSize: [20, 20], iconAnchor: [10, 10] }),
+        interactive: false
+      });
+      pureLayer.addLayer(label);
+    });
+    pureLayer.addTo(map);
+    $('pure-toggle').textContent = count ? `🎯${count}` : '🎯';
+  };
+
+  $('pure-toggle').addEventListener('click', () => {
+    pureEnabled = !pureEnabled;
+    $('pure-toggle').classList.toggle('active', pureEnabled);
+    if (pureEnabled) {
+      if (!poiEnabled) { poiEnabled = true; $('poi-toggle').classList.add('active'); }
+      refreshPOIs();
+      analyzePureCells();
+    } else {
+      if (pureLayer) { map.removeLayer(pureLayer); pureLayer = null; }
+      $('pure-toggle').textContent = '🎯';
+    }
   });
 
   // --- 飾品圖鑑 ---
@@ -413,7 +460,7 @@
     const bk = boundsKey();
     if (bk === lastBounds) return;
     clearTimeout(moveTimer);
-    moveTimer = setTimeout(() => { lastBounds = bk; renderCells(); if (poiEnabled) refreshPOIs(); }, 150);
+    moveTimer = setTimeout(() => { lastBounds = bk; renderCells(); if (poiEnabled) refreshPOIs(); if (pureEnabled) analyzePureCells(); }, 150);
   });
   updateLevel();
   updateDailyUI();
