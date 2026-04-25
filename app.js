@@ -154,19 +154,10 @@
   });
 
   // --- POI 圖層 ---
-  $('poi-toggle').addEventListener('click', () => {
-    poiEnabled = !poiEnabled;
-    $('poi-toggle').classList.toggle('active', poiEnabled);
-    if (poiEnabled) fetchAndShowPOIs(); else if (poiLayer) { map.removeLayer(poiLayer); poiLayer = null; }
-  });
+  const poiRules = () => DECOR_RULES.filter(r => r.tags.length > 0);
+  const viewBounds = () => { const b = map.getBounds(); return { south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() }; };
 
-  const fetchAndShowPOIs = async () => {
-    const b = map.getBounds();
-    const bounds = { south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() };
-    const rules = DECOR_RULES.filter(r => r.tags.length > 0);
-    $('poi-toggle').textContent = '⏳';
-    const points = await POI.fetchPOIs(bounds, rules);
-    $('poi-toggle').textContent = '📍';
+  const renderPOILayer = (points) => {
     if (poiLayer) map.removeLayer(poiLayer);
     poiLayer = L.featureGroup();
     for (const p of points) {
@@ -178,6 +169,24 @@
     }
     poiLayer.addTo(map);
   };
+
+  const refreshPOIs = () => {
+    if (!poiEnabled) return;
+    const { points, loading } = POI.getPOIs(viewBounds(), poiRules(), (updated) => {
+      // Background fetch done — refresh display
+      renderPOILayer(updated);
+      $('poi-toggle').textContent = '📍';
+    });
+    renderPOILayer(points);
+    $('poi-toggle').textContent = loading ? '⏳' : '📍';
+  };
+
+  $('poi-toggle').addEventListener('click', () => {
+    poiEnabled = !poiEnabled;
+    $('poi-toggle').classList.toggle('active', poiEnabled);
+    if (poiEnabled) { refreshPOIs(); }
+    else if (poiLayer) { map.removeLayer(poiLayer); poiLayer = null; POI.clear(); }
+  });
 
   // --- 飾品圖鑑 ---
   // Map noto: icon names to emoji (Iconify noto set → Unicode emoji)
@@ -361,7 +370,7 @@
     const bk = boundsKey();
     if (bk === lastBounds) return;
     clearTimeout(moveTimer);
-    moveTimer = setTimeout(() => { lastBounds = bk; renderCells(); if (poiEnabled) fetchAndShowPOIs(); }, 150);
+    moveTimer = setTimeout(() => { lastBounds = bk; renderCells(); if (poiEnabled) refreshPOIs(); }, 150);
   });
   updateLevel();
   renderCells();

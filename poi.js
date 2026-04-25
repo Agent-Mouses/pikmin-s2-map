@@ -1,4 +1,4 @@
-// POI layer: Overpass API integration
+// POI layer: Overpass API with wide-area preload + local filtering
 // Architecture inspired by scott0127/pik_tool (MIT License)
 
 const POI = (() => {
@@ -8,53 +8,54 @@ const POI = (() => {
   ];
   let serverIdx = 0, lastReq = 0, abortCtrl = null;
 
-  // --- Cache: localStorage + TTL (30 min) ---
-  const CACHE_KEY = 'pikmin-s2-poi-cache';
+  // --- In-memory store: all loaded POIs + loaded region ---
+  let allPoints = [];
+  let loadedRegion = null; // { south, west, north, east }
+
+  // --- localStorage cache (persist across sessions) ---
+  const CACHE_KEY = 'pikmin-s2-poi-store';
   const CACHE_TTL = 30 * 60 * 1000;
-  const CACHE_MAX = 20;
 
-  const cacheKey = (bounds) => `${bounds.south.toFixed(4)},${bounds.west.toFixed(4)},${bounds.north.toFixed(4)},${bounds.east.toFixed(4)}`;
-
-  const loadCache = () => { try { return JSON.parse(localStorage.getItem(CACHE_KEY)) || {}; } catch { return {}; } };
-  const saveCache = (c) => { try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch { /* quota */ } };
-
-  const getCached = (key) => {
-    const c = loadCache();
-    const entry = c[key];
-    if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data;
-    if (entry) { delete c[key]; saveCache(c); }
-    return null;
+  const loadStore = () => { try { return JSON.parse(localStorage.getItem(CACHE_KEY)); } catch { return null; } };
+  const saveStore = () => {
+    if (!loadedRegion || !allPoints.length) return;
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ region: loadedRegion, points: allPoints, ts: Date.now() })); } catch { /* quota */ }
   };
 
-  const setCache = (key, data) => {
-    const c = loadCache();
-    c[key] = { data, ts: Date.now() };
-    const keys = Object.keys(c);
-    if (keys.length > CACHE_MAX) {
-      keys.sort((a, b) => c[a].ts - c[b].ts);
-      keys.slice(0, keys.length - CACHE_MAX).forEach(k => delete c[k]);
+  // Restore from localStorage on init
+  const restore = () => {
+    const s = loadStore();
+    if (s && Date.now() - s.ts < CACHE_TTL && s.region && s.points) {
+      allPoints = s.points;
+      loadedRegion = s.region;
+      return true;
     }
-    saveCache(c);
+    return false;
+  };
+  restore();
+
+  // --- Filter points within viewport (instant, no API) ---
+  const filterInBounds = (bounds) =>
+    allPoints.filter(p => p.lat >= bounds.south && p.lat <= bounds.north && p.lon >= bounds.west && p.lon <= bounds.east);
+
+  // --- Check if viewport is within loaded region ---
+  const isWithinLoaded = (bounds) =>
+    loadedRegion &&
+    bounds.south >= loadedRegion.south && bounds.north <= loadedRegion.north &&
+    bounds.west >= loadedRegion.west && bounds.east <= loadedRegion.east;
+
+  // --- Expand bounds to ~2km for preload ---
+  const expandBounds = (bounds) => {
+    const PAD = 0.01; // ~1km each direction → ~2km total
+    return {
+      south: bounds.south - PAD, north: bounds.north + PAD,
+      west: bounds.west - PAD, east: bounds.east + PAD
+    };
   };
 
-  // Ensure bbox is at least ~500m so zoomed-in views still get results
-  const padBounds = (bounds) => {
-    const MIN_SPAN = 0.005; // ~500m
-    const latSpan = bounds.north - bounds.south;
-    const lngSpan = bounds.east - bounds.west;
-    const latPad = latSpan < MIN_SPAN ? (MIN_SPAN - latSpan) / 2 : 0;
-    const lngPad = lngSpan < MIN_SPAN ? (MIN_SPAN - lngSpan) / 2 : 0;
-    return latPad || lngPad ? {
-      south: bounds.south - latPad, north: bounds.north + latPad,
-      west: bounds.west - lngPad, east: bounds.east + lngPad
-    } : bounds;
-  };
-
-  // Build compact Overpass query: group tags by key to use regex
+  // --- Build compact Overpass query ---
   const buildQuery = (bounds, rules) => {
-    const b = padBounds(bounds);
-    const bbox = `${b.south},${b.west},${b.north},${b.east}`;
-    // Group: key → Set of values
+    const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
     const grouped = new Map();
     for (const rule of rules) {
       for (const tag of rule.tags) {
@@ -73,7 +74,7 @@ const POI = (() => {
         : `["${k}"~"^(${[...vals].join('|')})$"]`;
       parts.push(`  nw${filter}(${bbox});`);
     }
-    return `[out:json][timeout:25];\n(\n${parts.join('\n')}\n);\nout center qt 500;`;
+    return `[out:json][timeout:25];\n(\n${parts.join('\n')}\n);\nout center qt 2000;`;
   };
 
   const matchRule = (tags, rulesMap) => {
@@ -86,26 +87,22 @@ const POI = (() => {
     return null;
   };
 
-  const fetchPOIs = async (bounds, rules, onStatus) => {
+  // --- Fetch from Overpass (only when needed) ---
+  const fetchFromAPI = async (fetchBounds, rules) => {
     if (abortCtrl) abortCtrl.abort();
     abortCtrl = new AbortController();
-
-    const ck = cacheKey(bounds);
-    const cached = getCached(ck);
-    if (cached) return cached;
 
     const now = Date.now();
     if (now - lastReq < 2000) await new Promise(r => setTimeout(r, 2000 - (now - lastReq)));
     lastReq = Date.now();
 
-    const query = buildQuery(bounds, rules);
+    const query = buildQuery(fetchBounds, rules);
     if (!query) return [];
 
     const rulesMap = new Map(rules.map(r => [r.id, r]));
 
     for (let i = 0; i < SERVERS.length; i++) {
       const url = SERVERS[(serverIdx + i) % SERVERS.length];
-      if (onStatus) onStatus(`查詢興趣點中...`);
       try {
         const res = await fetch(url, {
           method: 'POST', body: query,
@@ -129,14 +126,48 @@ const POI = (() => {
             decorId: rule.id, decorName: rule.name, decorIcon: rule.icon
           });
         }
-        setCache(ck, points);
         return points;
       } catch (e) {
-        if (e.name === 'AbortError') return [];
+        if (e.name === 'AbortError') return null;
       }
     }
     return [];
   };
 
-  return { fetchPOIs };
+  // --- Main API: get POIs for viewport ---
+  // Returns { points, loading } — points are instant, loading = true means background fetch in progress
+  const getPOIs = (viewBounds, rules, onUpdate) => {
+    // Always return what we have instantly
+    const instant = loadedRegion ? filterInBounds(viewBounds) : [];
+
+    if (isWithinLoaded(viewBounds)) {
+      return { points: instant, loading: false };
+    }
+
+    // Need to fetch — do it in background
+    const fetchBounds = expandBounds(viewBounds);
+    fetchFromAPI(fetchBounds, rules).then(newPoints => {
+      if (!newPoints) return; // aborted
+      // Merge: dedupe by id
+      const seen = new Set(newPoints.map(p => p.id));
+      const kept = allPoints.filter(p => !seen.has(p.id));
+      allPoints = [...kept, ...newPoints];
+      // Expand loaded region
+      loadedRegion = loadedRegion ? {
+        south: Math.min(loadedRegion.south, fetchBounds.south),
+        north: Math.max(loadedRegion.north, fetchBounds.north),
+        west: Math.min(loadedRegion.west, fetchBounds.west),
+        east: Math.max(loadedRegion.east, fetchBounds.east)
+      } : fetchBounds;
+      saveStore();
+      if (onUpdate) onUpdate(filterInBounds(viewBounds));
+    });
+
+    return { points: instant, loading: true };
+  };
+
+  // Reset (when user toggles POI off)
+  const clear = () => { allPoints = []; loadedRegion = null; };
+
+  return { getPOIs, filterInBounds, clear };
 })();
