@@ -253,7 +253,7 @@
       pureLayer.addLayer(label);
     });
     pureLayer.addTo(map);
-    $('pure-toggle').textContent = count ? `🎯${count}` : '🎯';
+    $('pure-toggle').textContent = count ? `💎${count}` : '💎';
   };
 
   $('pure-toggle').addEventListener('click', () => {
@@ -265,7 +265,7 @@
       analyzePureCells();
     } else {
       if (pureLayer) { map.removeLayer(pureLayer); pureLayer = null; }
-      $('pure-toggle').textContent = '🎯';
+      $('pure-toggle').textContent = '💎';
     }
   });
 
