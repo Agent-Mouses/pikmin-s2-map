@@ -489,4 +489,6 @@
   updateLevel();
   updateDailyUI();
   renderCells();
+  // Auto-request GPS on first load
+  if (navigator.geolocation) $('gps-btn').click();
 })();
