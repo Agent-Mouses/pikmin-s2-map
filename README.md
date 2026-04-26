@@ -1,5 +1,7 @@
 # 🌱 Pikmin Bloom S2 Cell Map Tool
 
+> **AI Agent?** Read **[AI-GUIDE.md](AI-GUIDE.md)** for project orientation and operations.
+
 All-in-one mobile web tool for Pikmin Bloom farming strategy — S2 Cell grid, decor catalog, collection tracker, POI map.
 
 **🌐 Live:** https://agent-mouses.github.io/pikmin-s2-map/
