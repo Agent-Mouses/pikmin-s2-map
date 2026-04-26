@@ -192,10 +192,25 @@
   const poiRules = () => DECOR_RULES.filter(r => r.tags.length > 0);
   const viewBounds = () => { const b = map.getBounds(); return { south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() }; };
 
+  // Populate POI filter dropdown
+  const poiFilterEl = $('poi-decor-filter');
+  const poiFilterBar = $('poi-filter-bar');
+  for (const r of DECOR_RULES) {
+    if (!r.tags.length) continue;
+    const o = document.createElement('option');
+    o.value = r.id; o.textContent = `${r.icon} ${r.name}`;
+    poiFilterEl.appendChild(o);
+  }
+
+  const filterPoints = (points) => {
+    const f = poiFilterEl.value;
+    return f ? points.filter(p => p.decorId === f) : points;
+  };
+
   const renderPOILayer = (points) => {
     if (poiLayer) map.removeLayer(poiLayer);
     poiLayer = L.featureGroup();
-    for (const p of points) {
+    for (const p of filterPoints(points)) {
       const marker = L.marker([p.lat, p.lon], {
         icon: L.divIcon({ className: 'poi-icon', html: `<span>${p.decorIcon}</span>`, iconSize: [24, 24], iconAnchor: [12, 12] })
       });
@@ -205,29 +220,37 @@
     poiLayer.addTo(map);
   };
 
+  let lastPOIPoints = [];
   const refreshPOIs = () => {
     if (!poiEnabled) return;
     const { points, loading } = POI.getPOIs(viewBounds(), poiRules(), (updated) => {
+      lastPOIPoints = updated;
       renderPOILayer(updated);
       $('poi-toggle').textContent = '📍';
       if (pureEnabled) analyzePureCells();
     });
+    lastPOIPoints = points;
     renderPOILayer(points);
     $('poi-toggle').textContent = loading ? '⏳' : '📍';
   };
 
+  poiFilterEl.addEventListener('change', () => {
+    if (poiEnabled) { renderPOILayer(lastPOIPoints); if (pureEnabled) analyzePureCells(); }
+  });
+
   $('poi-toggle').addEventListener('click', () => {
     poiEnabled = !poiEnabled;
     $('poi-toggle').classList.toggle('active', poiEnabled);
+    poiFilterBar.classList.toggle('visible', poiEnabled);
     if (poiEnabled) { refreshPOIs(); }
-    else { if (poiLayer) { map.removeLayer(poiLayer); poiLayer = null; } POI.clear(); if (pureEnabled) { pureEnabled = false; $('pure-toggle').classList.remove('active'); if (pureLayer) { map.removeLayer(pureLayer); pureLayer = null; } } }
+    else { if (poiLayer) { map.removeLayer(poiLayer); poiLayer = null; } POI.clear(); lastPOIPoints = []; poiFilterEl.value = ''; if (pureEnabled) { pureEnabled = false; $('pure-toggle').classList.remove('active'); if (pureLayer) { map.removeLayer(pureLayer); pureLayer = null; } } }
   });
 
   // --- 純點搜尋 ---
   const analyzePureCells = () => {
     if (pureLayer) map.removeLayer(pureLayer);
     pureLayer = L.featureGroup();
-    const points = POI.filterInBounds(viewBounds());
+    const points = filterPoints(POI.filterInBounds(viewBounds()));
     // group POIs by L17 cell
     const cells = new Map();
     for (const p of points) {
@@ -260,7 +283,7 @@
     pureEnabled = !pureEnabled;
     $('pure-toggle').classList.toggle('active', pureEnabled);
     if (pureEnabled) {
-      if (!poiEnabled) { poiEnabled = true; $('poi-toggle').classList.add('active'); }
+      if (!poiEnabled) { poiEnabled = true; $('poi-toggle').classList.add('active'); poiFilterBar.classList.add('visible'); }
       refreshPOIs();
       analyzePureCells();
     } else {

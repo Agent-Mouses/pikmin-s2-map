@@ -31,6 +31,10 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .level-control input[type=range]{flex:1;accent-color:#3498db}
 .quick-levels{display:flex;gap:3px}
 .level-btn{background:rgba(255,255,255,0.15);border:none;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;cursor:pointer}
+/* POI filter bar */
+.poi-filter-bar{display:none;background:rgba(0,0,0,0.8);padding:4px 12px;backdrop-filter:blur(8px)}
+.poi-filter-bar.visible{display:flex}
+.poi-filter-bar select{flex:1;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:5px 8px;font-size:11px}
 /* Map buttons */
 .map-btn{position:absolute;z-index:1000;width:40px;height:40px;border-radius:50%;border:none;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px}
 .map-btn.active{background:#00e5ff;color:#fff}
@@ -131,6 +135,9 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
         <button class="level-btn" data-level="20">20</button>
       </div>
     </div>
+  </div>
+  <div class="poi-filter-bar" id="poi-filter-bar">
+    <select id="poi-decor-filter"><option value="">全部飾品</option></select>
   </div>
   <div id="map"></div>
   <button class="map-btn" id="credits-btn" title="致謝">ℹ️</button>
