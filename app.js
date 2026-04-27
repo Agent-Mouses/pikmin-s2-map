@@ -478,6 +478,31 @@
   $('daily-count').addEventListener('touchstart', () => { dailyTimer = setTimeout(() => { Collection.resetDaily(); updateDailyUI(); }, 600); }, { passive: true });
   $('daily-count').addEventListener('touchend', () => clearTimeout(dailyTimer));
 
+  // --- Cell ID 搜尋 ---
+  let searchHL = null;
+  $('search-cell-btn').addEventListener('click', () => {
+    $('cell-search-bar').classList.toggle('visible');
+    if ($('cell-search-bar').classList.contains('visible')) $('cell-search-input').focus();
+  });
+  const doSearchCell = () => {
+    const val = $('cell-search-input').value.trim();
+    if (!val) return;
+    const cell = S2.cellFromId(val);
+    if (!cell) return alert('無效的 Cell ID');
+    currentLevel = cell.level;
+    updateLevel();
+    const center = S2.cellCenter(cell);
+    map.setView([center.lat, center.lng], 18);
+    if (searchHL) map.removeLayer(searchHL);
+    searchHL = L.polygon(S2.cellCorners(cell).map(c => [c.lat, c.lng]), {
+      color: '#ff0', weight: 3, opacity: 0.9, fillOpacity: 0.25, fillColor: '#ff0', interactive: false
+    }).addTo(map);
+    $('cell-search-bar').classList.remove('visible');
+    setTimeout(() => { if (searchHL) { map.removeLayer(searchHL); searchHL = null; } }, 10000);
+  };
+  $('cell-search-go').addEventListener('click', doSearchCell);
+  $('cell-search-input').addEventListener('keydown', e => { if (e.key === 'Enter') doSearchCell(); });
+
   // --- 初始化 ---
   const boundsKey = () => { const b = map.getBounds(); return `${b.getSouth().toFixed(4)},${b.getWest().toFixed(4)},${b.getNorth().toFixed(4)},${b.getEast().toFixed(4)},${currentLevel}`; };
   map.on('moveend', () => {

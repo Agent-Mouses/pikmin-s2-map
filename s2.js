@@ -68,7 +68,7 @@ const S2 = (() => {
     return [(ij[0] + off[0]) / max, (ij[1] + off[1]) / max];
   };
 
-  // Hilbert curve (forward only — for key generation)
+  // Hilbert curve
   const hilbertMap = {
     'a': [[0, 'd'], [1, 'a'], [3, 'b'], [2, 'a']],
     'b': [[2, 'b'], [1, 'b'], [3, 'a'], [0, 'c']],
@@ -87,6 +87,45 @@ const S2 = (() => {
       sq = t[1];
     }
     return pos;
+  };
+
+  // Reverse Hilbert: quad list → ij
+  const reverseHilbertMap = {};
+  for (const [state, entries] of Object.entries(hilbertMap)) {
+    reverseHilbertMap[state] = {};
+    for (let idx = 0; idx < 4; idx++) {
+      const [quad, next] = entries[idx];
+      reverseHilbertMap[state][quad] = { ij: idx, next };
+    }
+  }
+
+  const hilbertQuadListToPoint = (quads, order) => {
+    let x = 0, y = 0, sq = 'a';
+    for (let i = 0; i < order; i++) {
+      const { ij, next } = reverseHilbertMap[sq][quads[i]];
+      x = (x << 1) | (ij >> 1);
+      y = (y << 1) | (ij & 1);
+      sq = next;
+    }
+    return [x, y];
+  };
+
+  // Parse numeric cell ID → cell object
+  const cellFromId = (idStr) => {
+    const id = BigInt(idStr);
+    let bits = id.toString(2).padStart(64, '0');
+    // Find trailing 1 bit (level marker)
+    const lastOne = bits.lastIndexOf('1');
+    const posBits = lastOne; // number of position bits before the trailing 1
+    const face = parseInt(bits.slice(0, 3), 2);
+    const level = (posBits - 3) / 2;
+    if (level < 0 || level > 30 || level !== Math.floor(level)) return null;
+    const quads = [];
+    for (let i = 3; i < 3 + level * 2; i += 2) {
+      quads.push(parseInt(bits.slice(i, i + 2), 2));
+    }
+    const [x, y] = hilbertQuadListToPoint(quads, level);
+    return { face, ij: [x, y], level };
   };
 
   // --- S2Cell: face + ij + level ---
@@ -168,5 +207,5 @@ const S2 = (() => {
     return cells;
   };
 
-  return { cellFromLatLng, cellCenter, cellCorners, cellKey, cellId, cellToString, getCellsInBounds };
+  return { cellFromLatLng, cellFromId, cellCenter, cellCorners, cellKey, cellId, cellToString, getCellsInBounds };
 })();
