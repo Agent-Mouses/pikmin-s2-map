@@ -238,9 +238,27 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
       </div>
       <div class="help-card">
         <h4>📍 顯示 POI</h4>
-        <p>點 <b>📍</b> 開啟 → 從 OpenStreetMap 查詢附近餐廳、咖啡廳、公園、車站等，顯示對應飾品 emoji。再按一次關閉。</p>
+        <p>點 <b>📍</b> 開啟 → 同時顯示 <b>OpenStreetMap</b> 和 <b>Foursquare</b> 的 POI 資料（餐廳、咖啡廳、便利商店、車站等），對應飾品 emoji。再按一次關閉。</p>
         <p>開啟後上方會出現<b>飾品篩選</b>下拉選單，可以只顯示特定類型（例如只看 ☕ 咖啡廳）。💎 純點搜尋也會跟著篩選。</p>
-        <p class="help-note">⚠️ 需要網路，第一次可能要等幾秒。</p>
+        <p>Foursquare 資料會根據你的 GPS 位置自動載入（目前支援台灣、日本、美國東岸）。</p>
+        <p class="help-note">⚠️ OSM 資料需要網路即時查詢；Foursquare 資料為預載離線資料（首次載入需下載）。</p>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>📡 探測器頁</h3>
+      <div class="help-card">
+        <h4>🔍 探測器模擬</h4>
+        <p>模擬遊戲內探測器的行為。GPS 開啟後自動掃描 <b>100m 半徑</b>內所有 L17 Cell，列出可能的飾品類型（最多 6 種，跟遊戲一樣）。</p>
+        <p>資料來源合併 <b>OpenStreetMap + Foursquare</b>，比單一來源更接近遊戲實際結果。</p>
+      </div>
+      <div class="help-card">
+        <h4>🔄 25m 刷新提示</h4>
+        <p>遊戲內探測器每移動 <b>25m</b> 會重新掃描飾品清單。本功能追蹤你的移動距離，提示還需走多遠才會刷新。</p>
+      </div>
+      <div class="help-card">
+        <h4>⚠️ 多飾品 Cell 警告</h4>
+        <p>標記 100m 內有<b>多個 POI 類型</b>的 L17 Cell。這些格子的飾品<b>無法靠移動探測器來分離</b>（因為共用同一個 Cell 中心點）。</p>
       </div>
     </div>
 
@@ -352,7 +370,7 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
         <p><b>Q: 顯示「格子太多」？</b><br>放大地圖或降低 Level。</p>
         <p><b>Q: POI 沒反應？</b><br>第一次載入需要幾秒，之後移動地圖會即時顯示。如果完全沒反應，可能是 Overpass API 暫時限流，等幾秒再試。</p>
         <p><b>Q: 換手機？</b><br>統計頁 → 複製備份到剪貼簿 → 新手機貼上還原。</p>
-        <p><b>Q: 飾品類型跟地圖上的 POI 不一樣？</b><br>遊戲同時使用 OpenStreetMap 和 Foursquare 資料，我們的 POI 只顯示 OSM 資料，可能有差異。</p>
+        <p><b>Q: 飾品類型跟地圖上的 POI 不一樣？</b><br>遊戲同時使用 OpenStreetMap、Foursquare 及可能其他來源。我們已整合 OSM + Foursquare 資料，但仍可能有差異（例如 Yelp 或 Google Places 獨有的 POI）。</p>
         <p><b>Q: 跟 Pik-Tool 差在哪？</b><br>我們不需要帳號，資料存手機本地。多了 S2 多 Level 切換和格子標記。</p>
       </div>
     </div>
@@ -362,7 +380,7 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
       <div class="help-card">
         <p>非官方粉絲工具，與 Nintendo / Niantic 無關。</p>
         <p>開源專案：<a href="https://github.com/Agent-Mouses/pikmin-s2-map" target="_blank">GitHub</a></p>
-        <p>飾品資料來自 <a href="https://github.com/scott0127/pik_tool" target="_blank">scott0127/pik_tool</a> (MIT)。完整致謝見地圖頁 ℹ️ 按鈕。</p>
+        <p>飾品資料來自 <a href="https://github.com/scott0127/pik_tool" target="_blank">scott0127/pik_tool</a> (MIT)。POI 資料來自 <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> (ODbL) 和 <a href="https://opensource.foursquare.com/os-places/" target="_blank">Foursquare OS Places</a> (Apache 2.0)。完整致謝見地圖頁 ℹ️ 按鈕。</p>
       </div>
     </div>
   </div>
@@ -411,12 +429,15 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
   <h3>📦 開源專案致謝</h3>
   <ul>
     <li><strong><a href="https://github.com/scott0127/pik_tool" target="_blank">scott0127/pik_tool</a></strong> (MIT 授權) — 飾品資料 (decor.json)、OSM 標籤→飾品對應規則、Overpass API 架構。皮克敏 Bloom 原創飾品圖鑑與收藏追蹤工具。</li>
+    <li><strong><a href="https://github.com/helixhacks1/PikminDecorPredictor" target="_blank">helixhacks1/PikminDecorPredictor</a></strong> (MIT 授權) — Foursquare / Yelp / Google Places category → 飾品類型對應表 datamine。探測器模擬的 Foursquare category 對應基於此研究。</li>
     <li><strong><a href="https://github.com/jonatkins/s2-geometry-javascript" target="_blank">jonatkins/s2-geometry-javascript</a></strong> — S2 Cell 幾何計算（face/ij/level、頂點運算、Hilbert 曲線）。已移植至本工具的 s2.js 模組。</li>
     <li><strong><a href="https://github.com/coolaj86/s2-geometry.js" target="_blank">s2-geometry (npm)</a></strong> (MIT/Apache-2/ISC) — S2 Cell ID 編碼與 key 轉換參考。</li>
     <li><strong><a href="https://github.com/pixlpirate/pikmin-map" target="_blank">pixlpirate/pikmin-map</a></strong> (AGPL-3.0) — 基於 OSM 的皮克敏飾品位置地圖概念啟發。</li>
     <li><strong><a href="https://leafletjs.com/" target="_blank">Leaflet.js</a></strong> (BSD-2-Clause) — 互動式地圖函式庫。</li>
     <li><strong><a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a></strong> (ODbL) — 地圖圖磚資料。</li>
     <li><strong><a href="https://overpass-api.de/" target="_blank">Overpass API</a></strong> — OSM 資料查詢，用於 POI 興趣點定位。</li>
+    <li><strong><a href="https://opensource.foursquare.com/os-places/" target="_blank">Foursquare Open Source Places</a></strong> (Apache 2.0) — 1 億+ 全球 POI 資料集。本工具提取台灣、日本、美國東岸的 Pikmin 相關 POI，與 OSM 資料合併使用。</li>
+    <li><strong><a href="https://source.coop/fused/fsq-os-places" target="_blank">Fused / Source Cooperative</a></strong> — Foursquare OS Places 的 GeoParquet 分發，提供公開存取。</li>
     <li><strong><a href="https://s2geometry.io/" target="_blank">Google S2 Geometry</a></strong> — 原始 S2 Cell 系統文件與演算法。</li>
   </ul>
 
@@ -429,6 +450,9 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
   <ul>
     <li>飾品定義與皮克敏類型資料來自 <a href="https://github.com/scott0127/pik_tool" target="_blank">pik_tool</a> 社群維護的資料集。</li>
     <li>S2 Cell 刷盆機制資訊來自社群研究（Threads @ai.jc_、Pokemon GO Hub、皮克敏 Bloom 社群）。</li>
+    <li>Foursquare POI 資料來自 <a href="https://opensource.foursquare.com/os-places/" target="_blank">Foursquare Open Source Places</a>（2024-11-19 release），涵蓋台灣 23 萬、日本 196 萬、美國東岸 122 萬筆 POI。</li>
+    <li>Foursquare category → 飾品類型對應基於 <a href="https://github.com/helixhacks1/PikminDecorPredictor" target="_blank">PikminDecorPredictor</a> 社群 datamine 研究及 <a href="https://www.pikminwiki.com/Decor_Pikmin" target="_blank">Pikipedia</a> wiki。</li>
+    <li>遊戲確認使用 OpenStreetMap + Foursquare（及可能其他來源）判斷飾品類型（<a href="https://www.pikminwiki.com/Decor_Pikmin#Decor_types" target="_blank">Pikipedia 來源</a>）。</li>
   </ul>
 
   <h3>🔗 相關工具</h3>
