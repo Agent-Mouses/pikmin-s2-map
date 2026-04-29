@@ -118,6 +118,27 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .credits-modal ul{padding-left:20px}
 .credits-modal a{color:#3498db}
 .credits-modal .close-btn{position:fixed;top:12px;right:16px;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;z-index:3001}
+/* Detector panel */
+#panel-detector{background:#111;color:#fff;overflow-y:auto}
+.detector-header{padding:12px 14px 8px;background:rgba(0,0,0,0.8);position:sticky;top:0;z-index:10}
+.detector-header h2{font-size:16px;margin:0}
+.detector-subtitle{font-size:11px;color:#aaa;margin-top:2px}
+.detector-body{padding:8px 12px 24px}
+.detector-section{margin-bottom:16px}
+.detector-section h3{font-size:13px;color:#3498db;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #333}
+.detector-list{display:flex;flex-direction:column;gap:4px}
+.detector-empty{font-size:12px;color:#666;padding:8px 0}
+.detector-item{background:#1a1a1a;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px}
+.detector-item .di-icon{font-size:20px}
+.detector-item .di-info{flex:1}
+.detector-item .di-name{font-size:12px;font-weight:600}
+.detector-item .di-detail{font-size:10px;color:#aaa}
+.detector-item .di-dist{font-size:11px;color:#4ade80;white-space:nowrap}
+.detector-item.multi-warn{border-left:3px solid #f59e0b}
+.detector-card{background:#1a1a1a;border-radius:8px;padding:10px 12px}
+.detector-card p{font-size:12px;color:#ccc;line-height:1.6;margin:0}
+.refresh-dist{font-size:24px;font-weight:700;color:#00e5ff;margin-top:6px!important;text-align:center}
+.detector-badge{display:inline-block;background:#f59e0b;color:#000;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:4px}
 @media(max-width:480px){.quick-levels{display:none}.top-bar h1{font-size:11px}}
 </style>
 </head>
@@ -347,9 +368,31 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
   </div>
 </div>
 
+<div class="tab-panel" id="panel-detector">
+  <div class="detector-header">
+    <h2>📡 探測器模擬</h2>
+    <p class="detector-subtitle" id="detector-status">開啟 GPS 後自動掃描</p>
+  </div>
+  <div class="detector-body" id="detector-body">
+    <div class="detector-section" id="detector-sim">
+      <h3>🔍 100m 內飾品（模擬探測器）</h3>
+      <div id="detector-list" class="detector-list"><p class="detector-empty">等待 GPS 定位...</p></div>
+    </div>
+    <div class="detector-section" id="detector-refresh">
+      <h3>🔄 25m 刷新提示</h3>
+      <div id="refresh-info" class="detector-card"><p>移動 25m 後探測器會重新掃描飾品清單。</p><p id="refresh-dist" class="refresh-dist">—</p></div>
+    </div>
+    <div class="detector-section" id="detector-multi">
+      <h3>⚠️ 多飾品 Cell 警告</h3>
+      <div id="multi-list" class="detector-list"><p class="detector-empty">掃描後顯示</p></div>
+    </div>
+  </div>
+</div>
+
 <!-- Tab bar -->
 <nav class="tab-bar">
   <button class="tab-btn active" data-tab="map"><span class="tab-icon">🗺️</span>地圖</button>
+  <button class="tab-btn" data-tab="detector"><span class="tab-icon">📡</span>探測器</button>
   <button class="tab-btn" data-tab="decor"><span class="tab-icon">📖</span>圖鑑</button>
   <button class="tab-btn" data-tab="collection"><span class="tab-icon">📊</span>統計</button>
   <button class="tab-btn" data-tab="help"><span class="tab-icon">❓</span>教學</button>

@@ -37,6 +37,7 @@
       if (currentTab === 'map') { map.invalidateSize(); renderCells(); }
       if (currentTab === 'decor') renderDecorCatalog();
       if (currentTab === 'collection') renderCollectionStats();
+      if (currentTab === 'detector' && userMarker) { const ll = userMarker.getLatLng(); renderDetector(ll.lat, ll.lng); }
     });
   });
 
@@ -149,6 +150,89 @@
     if (selCellHL) { map.removeLayer(selCellHL); selCellHL = null; }
   });
 
+  // --- 探測器模擬 ---
+  const haversine = (lat1, lng1, lat2, lng2) => {
+    const R = 6371000, toRad = Math.PI / 180;
+    const dLat = (lat2 - lat1) * toRad, dLng = (lng2 - lng1) * toRad;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+  let detectorScanPos = null;
+
+  const scanDetector = (lat, lng) => {
+    const pad = 0.0015;
+    const bounds = { sw: { lat: lat - pad, lng: lng - pad }, ne: { lat: lat + pad, lng: lng + pad } };
+    const cells = S2.getCellsInBounds(bounds, 17);
+    const results = [];
+    const poiPoints = POI.filterInBounds({ south: lat - pad, north: lat + pad, west: lng - pad, east: lng + pad });
+    const poiByCell = new Map();
+    for (const p of poiPoints) {
+      const c = S2.cellFromLatLng(p.lat, p.lon, 17);
+      const k = S2.cellKey(c);
+      if (!poiByCell.has(k)) poiByCell.set(k, { decors: new Map(), cell: c });
+      poiByCell.get(k).decors.set(p.decorId, { id: p.decorId, name: p.decorName, icon: p.decorIcon });
+    }
+    cells.forEach(cell => {
+      const center = S2.cellCenter(cell);
+      const dist = haversine(lat, lng, center.lat, center.lng);
+      if (dist > 100) return;
+      const k = S2.cellKey(cell);
+      const poi = poiByCell.get(k);
+      const decors = poi ? [...poi.decors.values()] : [{ id: 'roadside', name: '路邊', icon: '🏷️' }];
+      results.push({ cell, center, dist, decors, key: k });
+    });
+    results.sort((a, b) => a.dist - b.dist);
+    return results;
+  };
+
+  const renderDetector = (lat, lng) => {
+    const results = scanDetector(lat, lng);
+    const decorCount = new Map();
+    const multiCells = [];
+    for (const r of results) {
+      for (const d of r.decors) decorCount.set(d.id, (decorCount.get(d.id) || 0) + 1);
+      if (r.decors.length > 1) multiCells.push(r);
+    }
+    const uniqueDecors = [...new Map(results.flatMap(r => r.decors).map(d => [d.id, d])).values()];
+    const shown = uniqueDecors.slice(0, 6);
+    let simHtml = '';
+    if (!results.length) {
+      simHtml = '<p class="detector-empty">100m 內沒有 L17 Cell</p>';
+    } else {
+      simHtml = `<div class="detector-card" style="margin-bottom:6px"><p>📡 偵測到 <b>${results.length}</b> 個 L17 Cell，<b>${uniqueDecors.length}</b> 種飾品${uniqueDecors.length > 6 ? '（遊戲最多顯示 6 種）' : ''}</p></div>`;
+      simHtml += shown.map(d => {
+        const cnt = decorCount.get(d.id) || 0;
+        return `<div class="detector-item"><span class="di-icon">${d.icon}</span><div class="di-info"><span class="di-name">${d.name}</span><span class="di-detail">${cnt} 個 Cell</span></div></div>`;
+      }).join('');
+      simHtml += `<details style="margin-top:8px"><summary style="font-size:11px;color:#888;cursor:pointer">展開全部 Cell 詳情</summary>`;
+      simHtml += results.map(r => {
+        const icons = r.decors.map(d => d.icon).join('');
+        const multi = r.decors.length > 1 ? '<span class="detector-badge">多飾品</span>' : '';
+        return `<div class="detector-item${r.decors.length > 1 ? ' multi-warn' : ''}"><span class="di-icon">${icons}</span><div class="di-info"><span class="di-name">${r.decors.map(d => d.name).join('、')}${multi}</span><span class="di-detail">Cell ${S2.cellId(r.cell)}</span></div><span class="di-dist">${Math.round(r.dist)}m</span></div>`;
+      }).join('');
+      simHtml += '</details>';
+    }
+    $('detector-list').innerHTML = simHtml;
+    if (detectorScanPos) {
+      const moved = haversine(lat, lng, detectorScanPos.lat, detectorScanPos.lng);
+      const remaining = Math.max(0, 25 - moved);
+      $('refresh-dist').textContent = remaining < 1 ? '✅ 已刷新！' : `還需移動 ${Math.round(remaining)}m`;
+      if (remaining < 1) detectorScanPos = { lat, lng };
+    } else {
+      detectorScanPos = { lat, lng };
+      $('refresh-dist').textContent = '已記錄掃描位置';
+    }
+    if (!multiCells.length) {
+      $('multi-list').innerHTML = '<p class="detector-empty">✅ 100m 內沒有多飾品 Cell</p>';
+    } else {
+      $('multi-list').innerHTML = multiCells.map(r => {
+        const icons = r.decors.map(d => `${d.icon} ${d.name}`).join('、');
+        return `<div class="detector-item multi-warn"><span class="di-icon">⚠️</span><div class="di-info"><span class="di-name">${icons}</span><span class="di-detail">${Math.round(r.dist)}m — 無法靠移動分離</span></div></div>`;
+      }).join('');
+    }
+    $('detector-status').textContent = `最後掃描：${new Date().toLocaleTimeString()} ｜ ${results.length} Cell / ${uniqueDecors.length} 種飾品`;
+  };
+
   // --- GPS ---
   let watchId = null, detectorCircle = null;
   const highlightUserCell = (lat, lng) => {
@@ -166,6 +250,11 @@
       if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
       if (userCellHL) { map.removeLayer(userCellHL); userCellHL = null; }
       if (detectorCircle) { map.removeLayer(detectorCircle); detectorCircle = null; }
+      detectorScanPos = null;
+      $('detector-list').innerHTML = '<p class="detector-empty">等待 GPS 定位...</p>';
+      $('refresh-dist').textContent = '—';
+      $('multi-list').innerHTML = '<p class="detector-empty">掃描後顯示</p>';
+      $('detector-status').textContent = '開啟 GPS 後自動掃描';
       return;
     }
     if (!navigator.geolocation) return alert('此裝置不支援定位功能');
@@ -182,6 +271,8 @@
         if (!detectorCircle) {
           detectorCircle = L.circle([lat, lng], { radius: 100, color: '#00e5ff', weight: 1, opacity: 0.4, fillOpacity: 0.06, dashArray: '6,4', interactive: false }).addTo(map);
         } else detectorCircle.setLatLng([lat, lng]);
+        // update detector tab
+        renderDetector(lat, lng);
       },
       err => { alert('定位失敗：' + err.message); $('gps-btn').classList.remove('active'); watchId = null; },
       { enableHighAccuracy: true, maximumAge: 5000 }
