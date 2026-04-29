@@ -289,13 +289,22 @@
   const poiRules = () => DECOR_RULES.filter(r => r.tags.length > 0);
   const viewBounds = () => { const b = map.getBounds(); return { south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() }; };
 
-  // Populate POI filter dropdown
+  // Populate POI filter dropdown (OSM + FSQ types)
   const poiFilterEl = $('poi-decor-filter');
   const poiFilterBar = $('poi-filter-bar');
+  const addedFilters = new Set();
   for (const r of DECOR_RULES) {
     if (!r.tags.length) continue;
+    addedFilters.add(r.id);
     const o = document.createElement('option');
     o.value = r.id; o.textContent = `${r.icon} ${r.name}`;
+    poiFilterEl.appendChild(o);
+  }
+  for (const [id, meta] of Object.entries(FSQ.DECOR_META)) {
+    if (addedFilters.has(id)) continue;
+    addedFilters.add(id);
+    const o = document.createElement('option');
+    o.value = id; o.textContent = `${meta.icon} ${meta.name}`;
     poiFilterEl.appendChild(o);
   }
 
@@ -311,23 +320,38 @@
       const marker = L.marker([p.lat, p.lon], {
         icon: L.divIcon({ className: 'poi-icon', html: `<span>${p.decorIcon}</span>`, iconSize: [24, 24], iconAnchor: [12, 12] })
       });
-      marker.bindPopup(`<b>${p.decorIcon} ${p.name}</b><br><small>${p.decorName}</small>`);
+      marker.bindPopup(`<b>${p.decorIcon} ${p.name || p.decorName}</b><br><small>${p.decorName}</small>`);
       poiLayer.addLayer(marker);
     }
     poiLayer.addTo(map);
   };
 
+  // Merge OSM + Foursquare POIs for map display
+  const getMergedPOIs = (bounds) => {
+    const osmPts = POI.filterInBounds(bounds);
+    const fsqPts = FSQ.filterInBounds(bounds);
+    // Dedupe: if OSM and FSQ have POI in same ~20m area with same decor, keep OSM
+    const seen = new Set();
+    for (const p of osmPts) seen.add(`${p.lat.toFixed(3)},${p.lon.toFixed(3)},${p.decorId}`);
+    const unique = [...osmPts];
+    for (const p of fsqPts) {
+      if (!seen.has(`${p.lat.toFixed(3)},${p.lon.toFixed(3)},${p.decorId}`)) unique.push(p);
+    }
+    return unique;
+  };
+
   let lastPOIPoints = [];
   const refreshPOIs = () => {
     if (!poiEnabled) return;
-    const { points, loading } = POI.getPOIs(viewBounds(), poiRules(), (updated) => {
-      lastPOIPoints = updated;
-      renderPOILayer(updated);
+    const vb = viewBounds();
+    const { points, loading } = POI.getPOIs(vb, poiRules(), (updated) => {
+      lastPOIPoints = getMergedPOIs(vb);
+      renderPOILayer(lastPOIPoints);
       $('poi-toggle').textContent = '📍';
       if (pureEnabled) analyzePureCells();
     });
-    lastPOIPoints = points;
-    renderPOILayer(points);
+    lastPOIPoints = getMergedPOIs(vb);
+    renderPOILayer(lastPOIPoints);
     $('poi-toggle').textContent = loading ? '⏳' : '📍';
   };
 
@@ -347,7 +371,7 @@
   const analyzePureCells = () => {
     if (pureLayer) map.removeLayer(pureLayer);
     pureLayer = L.featureGroup();
-    const points = filterPoints(POI.filterInBounds(viewBounds()));
+    const points = filterPoints(getMergedPOIs(viewBounds()));
     // group POIs by L17 cell
     const cells = new Map();
     for (const p of points) {
@@ -361,7 +385,7 @@
       if (decors.size !== 1) return;
       count++;
       const decorId = [...decors][0];
-      const rule = DECOR_RULES.find(r => r.id === decorId);
+      const rule = DECOR_RULES.find(r => r.id === decorId) || (FSQ.DECOR_META[decorId] ? { icon: FSQ.DECOR_META[decorId].icon } : null);
       const corners = S2.cellCorners(cell).map(c => [c.lat, c.lng]);
       const poly = L.polygon(corners, { color: '#a78bfa', weight: 2, opacity: 0.85, fillOpacity: 0.12, fillColor: '#a78bfa', dashArray: '6,4', interactive: false });
       pureLayer.addLayer(poly);
