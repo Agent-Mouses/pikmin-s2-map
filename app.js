@@ -164,9 +164,12 @@
     const bounds = { sw: { lat: lat - pad, lng: lng - pad }, ne: { lat: lat + pad, lng: lng + pad } };
     const cells = S2.getCellsInBounds(bounds, 17);
     const results = [];
-    const poiPoints = POI.filterInBounds({ south: lat - pad, north: lat + pad, west: lng - pad, east: lng + pad });
+    // Merge OSM + Foursquare POIs
+    const osmPoints = POI.filterInBounds({ south: lat - pad, north: lat + pad, west: lng - pad, east: lng + pad });
+    const fsqPoints = FSQ.filterInBounds({ south: lat - pad, north: lat + pad, west: lng - pad, east: lng + pad });
+    const allPoints = [...osmPoints, ...fsqPoints];
     const poiByCell = new Map();
-    for (const p of poiPoints) {
+    for (const p of allPoints) {
       const c = S2.cellFromLatLng(p.lat, p.lon, 17);
       const k = S2.cellKey(c);
       if (!poiByCell.has(k)) poiByCell.set(k, { decors: new Map(), cell: c });
@@ -230,7 +233,7 @@
         return `<div class="detector-item multi-warn"><span class="di-icon">⚠️</span><div class="di-info"><span class="di-name">${icons}</span><span class="di-detail">${Math.round(r.dist)}m — 無法靠移動分離</span></div></div>`;
       }).join('');
     }
-    $('detector-status').textContent = `最後掃描：${new Date().toLocaleTimeString()} ｜ ${results.length} Cell / ${uniqueDecors.length} 種飾品`;
+    $('detector-status').textContent = `最後掃描：${new Date().toLocaleTimeString()} ｜ ${results.length} Cell / ${uniqueDecors.length} 種飾品（OSM+Foursquare）`;
   };
 
   // --- GPS ---
@@ -267,6 +270,9 @@
           map.setView([lat, lng], Math.max(map.getZoom(), 16));
         } else userMarker.setLatLng([lat, lng]);
         highlightUserCell(lat, lng);
+        // Auto-load Foursquare POI for detected region
+        const fsqRegion = FSQ.detectRegion(lat, lng);
+        if (fsqRegion) FSQ.load(fsqRegion);
         // detector 100m circle
         if (!detectorCircle) {
           detectorCircle = L.circle([lat, lng], { radius: 100, color: '#00e5ff', weight: 1, opacity: 0.4, fillOpacity: 0.06, dashArray: '6,4', interactive: false }).addTo(map);
